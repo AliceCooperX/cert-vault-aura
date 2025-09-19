@@ -1,0 +1,193 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Definition of the design system. All colors, gradients, fonts, etc should be defined here. 
+All colors MUST be HSL.
+*/
+
+@layer base {
+  :root {
+    /* Academic Certificate Vault Design System */
+    --background: 44 30% 96%;
+    --foreground: 220 40% 15%;
+
+    /* Academic Colors */
+    --academic-navy: 220 60% 15%;
+    --academic-gold: 45 95% 58%;
+    --academic-gold-light: 48 90% 70%;
+    --secure-emerald: 152 60% 35%;
+    --secure-emerald-light: 152 45% 50%;
+    --parchment: 44 40% 92%;
+    --parchment-dark: 42 25% 85%;
+    
+    /* Gradients */
+    --gradient-academic: linear-gradient(135deg, hsl(var(--academic-navy)), hsl(220 50% 25%));
+    --gradient-gold: linear-gradient(135deg, hsl(var(--academic-gold)), hsl(var(--academic-gold-light)));
+    --gradient-secure: linear-gradient(135deg, hsl(var(--secure-emerald)), hsl(var(--secure-emerald-light)));
+    --gradient-hero: linear-gradient(135deg, hsl(var(--academic-navy)), hsl(220 50% 20%), hsl(var(--secure-emerald)));
+    
+    /* Shadows and Effects */
+    --shadow-academic: 0 8px 32px hsl(var(--academic-navy) / 0.15);
+    --shadow-gold: 0 8px 32px hsl(var(--academic-gold) / 0.25);
+    --shadow-secure: 0 4px 16px hsl(var(--secure-emerald) / 0.2);
+    --glow-gold: 0 0 30px hsl(var(--academic-gold) / 0.4);
+    --glow-secure: 0 0 20px hsl(var(--secure-emerald) / 0.3);
+
+    --card: 44 30% 98%;
+    --card-foreground: 220 40% 15%;
+
+    --popover: 44 30% 98%;
+    --popover-foreground: 220 40% 15%;
+
+    --primary: 220 60% 15%;
+    --primary-foreground: 44 30% 96%;
+
+    --secondary: 45 95% 58%;
+    --secondary-foreground: 220 60% 15%;
+
+    --muted: 42 25% 85%;
+    --muted-foreground: 220 20% 50%;
+
+    --accent: 152 60% 35%;
+    --accent-foreground: 44 30% 96%;
+
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 40% 98%;
+
+    --border: 214.3 31.8% 91.4%;
+    --input: 214.3 31.8% 91.4%;
+    --ring: 222.2 84% 4.9%;
+
+    --radius: 0.5rem;
+
+    --sidebar-background: 0 0% 98%;
+
+    --sidebar-foreground: 240 5.3% 26.1%;
+
+    --sidebar-primary: 240 5.9% 10%;
+
+    --sidebar-primary-foreground: 0 0% 98%;
+
+    --sidebar-accent: 240 4.8% 95.9%;
+
+    --sidebar-accent-foreground: 240 5.9% 10%;
+
+    --sidebar-border: 220 13% 91%;
+
+    --sidebar-ring: 217.2 91.2% 59.8%;
+  }
+
+  .dark {
+    --background: 220 60% 8%;
+    --foreground: 44 30% 96%;
+
+    --card: 220 50% 10%;
+    --card-foreground: 44 30% 96%;
+
+    --popover: 220 50% 10%;
+    --popover-foreground: 44 30% 96%;
+
+    --primary: 45 95% 58%;
+    --primary-foreground: 220 60% 15%;
+
+    --secondary: 220 40% 20%;
+    --secondary-foreground: 45 95% 58%;
+
+    --muted: 217.2 32.6% 17.5%;
+    --muted-foreground: 215 20.2% 65.1%;
+
+    --accent: 217.2 32.6% 17.5%;
+    --accent-foreground: 210 40% 98%;
+
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 210 40% 98%;
+
+    --border: 217.2 32.6% 17.5%;
+    --input: 217.2 32.6% 17.5%;
+    --ring: 212.7 26.8% 83.9%;
+    --sidebar-background: 240 5.9% 10%;
+    --sidebar-foreground: 240 4.8% 95.9%;
+    --sidebar-primary: 224.3 76.3% 48%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 240 3.7% 15.9%;
+    --sidebar-accent-foreground: 240 4.8% 95.9%;
+    --sidebar-border: 240 3.7% 15.9%;
+    --sidebar-ring: 217.2 91.2% 59.8%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+  }
+}
+
+/* Academic Certificate Fonts */
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;700&family=Inter:wght@300;400;500;600&display=swap');
+
+/* Academic scroll animation */
+@keyframes scroll-reveal {
+  from {
+    opacity: 0;
+    transform: translateY(30px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* Circuit glow animation */
+@keyframes circuit-glow {
+  0%, 100% {
+    box-shadow: 0 0 20px hsl(var(--academic-gold) / 0.3);
+  }
+  50% {
+    box-shadow: 0 0 30px hsl(var(--academic-gold) / 0.6), 0 0 40px hsl(var(--secure-emerald) / 0.3);
+  }
+}
+
+/* Book flip animation */
+@keyframes book-flip {
+  0% { transform: rotateY(0deg); }
+  50% { transform: rotateY(-90deg); }
+  100% { transform: rotateY(0deg); }
+}
+
+/* Encrypted seal pulse */
+@keyframes seal-pulse {
+  0%, 100% {
+    transform: scale(1);
+    filter: drop-shadow(0 0 10px hsl(var(--secure-emerald) / 0.3));
+  }
+  50% {
+    transform: scale(1.05);
+    filter: drop-shadow(0 0 20px hsl(var(--secure-emerald) / 0.6));
+  }
+}
+
+/* Utility classes */
+.academic-heading {
+  @apply font-playfair font-bold bg-gradient-to-r from-academic-navy to-secure-emerald bg-clip-text text-transparent;
+}
+
+.academic-card {
+  @apply bg-card/80 backdrop-blur-sm border border-academic-gold/20 rounded-lg shadow-academic;
+}
+
+.secure-badge {
+  @apply bg-secure-emerald text-white px-3 py-1 rounded-full text-sm font-medium shadow-secure;
+}
+
+.circuit-glow {
+  animation: circuit-glow 3s ease-in-out infinite;
+}
+
+.scroll-reveal {
+  animation: scroll-reveal 0.8s ease-out;
+}
