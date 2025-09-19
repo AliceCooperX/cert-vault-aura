@@ -39,13 +39,13 @@ Click "Environment Variables" and add the following:
 ```env
 # Chain Configuration
 VITE_CHAIN_ID=11155111
-VITE_RPC_URL=https://sepolia.infura.io/v3/b18fb7e6ca7045ac83c41157ab93f990
+VITE_RPC_URL=https://sepolia.infura.io/v3/YOUR_INFURA_PROJECT_ID
 
 # Wallet Connect Configuration
-VITE_WALLET_CONNECT_PROJECT_ID=2ec9743d0d0cd7fb94dee1a7e6d33475
+VITE_WALLET_CONNECT_PROJECT_ID=YOUR_WALLET_CONNECT_PROJECT_ID
 
 # Infura Configuration (Optional)
-VITE_INFURA_API_KEY=b18fb7e6ca7045ac83c41157ab93f990
+VITE_INFURA_API_KEY=YOUR_INFURA_API_KEY
 
 # Contract Configuration (Update with your deployed contract address)
 VITE_CONTRACT_ADDRESS=YOUR_DEPLOYED_CONTRACT_ADDRESS
@@ -71,9 +71,9 @@ VITE_CONTRACT_ADDRESS=YOUR_DEPLOYED_CONTRACT_ADDRESS
 | Variable | Description | Required | Example |
 |----------|-------------|----------|---------|
 | `VITE_CHAIN_ID` | Ethereum chain ID | Yes | `11155111` (Sepolia) |
-| `VITE_RPC_URL` | RPC endpoint URL | Yes | `https://sepolia.infura.io/v3/...` |
-| `VITE_WALLET_CONNECT_PROJECT_ID` | WalletConnect project ID | Yes | `2ec9743d0d0cd7fb94dee1a7e6d33475` |
-| `VITE_INFURA_API_KEY` | Infura API key | Optional | `b18fb7e6ca7045ac83c41157ab93f990` |
+| `VITE_RPC_URL` | RPC endpoint URL | Yes | `https://sepolia.infura.io/v3/YOUR_PROJECT_ID` |
+| `VITE_WALLET_CONNECT_PROJECT_ID` | WalletConnect project ID | Yes | `YOUR_WALLET_CONNECT_PROJECT_ID` |
+| `VITE_INFURA_API_KEY` | Infura API key | Optional | `YOUR_INFURA_API_KEY` |
 | `VITE_CONTRACT_ADDRESS` | Deployed contract address | Yes | `0x...` |
 
 ## Smart Contract Deployment

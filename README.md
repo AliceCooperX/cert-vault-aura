@@ -1,22 +1,22 @@
 # Cert Vault Aura
 
-A decentralized certificate vault platform with FHE (Fully Homomorphic Encryption) for secure credential management and verification.
+A next-generation decentralized credential management platform powered by Fully Homomorphic Encryption (FHE) technology, enabling secure certificate storage and verification while maintaining complete data privacy.
 
-## Features
+## Core Capabilities
 
-- **FHE-Encrypted Storage**: All certificates and credentials are encrypted using Fully Homomorphic Encryption
-- **Real Wallet Integration**: Connect with MetaMask, Rainbow, and other popular wallets
-- **Decentralized Verification**: Verify certificates without revealing sensitive data
-- **Privacy-First Design**: User data never leaves their control
-- **On-Chain Security**: All operations verified on blockchain
+- **Zero-Knowledge Verification**: Verify credentials without exposing sensitive information
+- **Multi-Wallet Support**: Seamless integration with MetaMask, Rainbow, Coinbase Wallet, and more
+- **Encrypted On-Chain Storage**: All certificate data encrypted using FHE before blockchain storage
+- **Decentralized Trust**: Eliminate single points of failure in credential verification
+- **Privacy-Preserving Operations**: Perform computations on encrypted data without decryption
 
-## Technology Stack
+## Architecture
 
-- **Frontend**: React 18, TypeScript, Vite
-- **UI Components**: shadcn/ui, Tailwind CSS
-- **Wallet Integration**: RainbowKit, Wagmi, Viem
-- **Blockchain**: Ethereum (Sepolia Testnet)
-- **Encryption**: FHE (Fully Homomorphic Encryption)
+- **Frontend**: React 18 with TypeScript and Vite
+- **UI Framework**: shadcn/ui components with Tailwind CSS
+- **Web3 Integration**: RainbowKit, Wagmi, and Viem for wallet connectivity
+- **Blockchain**: Ethereum Sepolia Testnet
+- **Encryption Engine**: Zama FHE for privacy-preserving computations
 
 ## Getting Started
 

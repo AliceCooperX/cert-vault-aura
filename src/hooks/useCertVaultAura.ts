@@ -94,11 +94,62 @@ export function useCertVaultAura() {
     }
   };
 
+  // Encrypt and store certificate data on-chain
+  const encryptCertificateData = async (
+    certId: number,
+    encryptedScore: string,
+    encryptedGrade: string,
+    dataHash: string
+  ) => {
+    try {
+      setIsLoading(true);
+      setError(null);
+      
+      await writeContract({
+        address: contractConfig.address,
+        abi: contractConfig.abi,
+        functionName: 'encryptCertificateData',
+        args: [certId, encryptedScore, encryptedGrade, dataHash],
+      });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to encrypt certificate data');
+      throw err;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Update certificate with encrypted data
+  const updateCertificateWithEncryptedData = async (
+    certId: number,
+    newStatus: number,
+    encryptedUpdateData: string
+  ) => {
+    try {
+      setIsLoading(true);
+      setError(null);
+      
+      await writeContract({
+        address: contractConfig.address,
+        abi: contractConfig.abi,
+        functionName: 'updateCertificateWithEncryptedData',
+        args: [certId, newStatus, encryptedUpdateData],
+      });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to update certificate');
+      throw err;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   return {
     registerIssuer,
     issueCertificate,
     requestVerification,
     revokeCertificate,
+    encryptCertificateData,
+    updateCertificateWithEncryptedData,
     isLoading,
     error,
     address,

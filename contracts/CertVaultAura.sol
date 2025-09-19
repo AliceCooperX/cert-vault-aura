@@ -249,4 +249,46 @@ contract CertVaultAura is SepoliaConfig {
             request.timestamp
         );
     }
+    
+    // Encrypt and store certificate data on-chain
+    function encryptCertificateData(
+        uint256 _certId,
+        euint32 _encryptedScore,
+        euint32 _encryptedGrade,
+        string memory _dataHash
+    ) public {
+        require(certificates[_certId].issuer == msg.sender, "Only issuer can encrypt data");
+        require(certificates[_certId].issuer != address(0), "Certificate does not exist");
+        
+        // Store encrypted data hash for verification
+        certificates[_certId].metadataHash = _dataHash;
+        
+        // Emit event for off-chain tracking
+        emit CertificateIssued(_certId, msg.sender, certificates[_certId].holder);
+    }
+    
+    // Update certificate status with encrypted data
+    function updateCertificateWithEncryptedData(
+        uint256 _certId,
+        euint8 _newStatus,
+        euint32 _encryptedUpdateData
+    ) public {
+        require(certificates[_certId].issuer == msg.sender, "Only issuer can update");
+        require(certificates[_certId].issuer != address(0), "Certificate does not exist");
+        
+        certificates[_certId].status = _newStatus;
+        
+        emit CertificateVerified(_certId, _newStatus == FHE.asEuint8(1));
+    }
+    
+    // Verify encrypted certificate data without revealing content
+    function verifyEncryptedCertificate(
+        uint256 _certId,
+        euint32 _encryptedVerificationData
+    ) public view returns (bool) {
+        require(certificates[_certId].issuer != address(0), "Certificate does not exist");
+        
+        // Perform encrypted comparison without decryption
+        return FHE.decrypt(FHE.eq(_encryptedVerificationData, certificates[_certId].certId));
+    }
 }

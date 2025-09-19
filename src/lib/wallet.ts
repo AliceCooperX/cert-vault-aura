@@ -2,7 +2,7 @@ import { getDefaultConfig } from '@rainbow-me/rainbowkit';
 import { sepolia } from 'wagmi/chains';
 
 // Wallet Connect Configuration
-export const projectId = import.meta.env.VITE_WALLET_CONNECT_PROJECT_ID || '2ec9743d0d0cd7fb94dee1a7e6d33475';
+export const projectId = import.meta.env.VITE_WALLET_CONNECT_PROJECT_ID || 'YOUR_WALLET_CONNECT_PROJECT_ID';
 
 // RainbowKit Configuration
 export const config = getDefaultConfig({
@@ -23,5 +23,5 @@ export const contractConfig = {
 // RPC Configuration
 export const rpcConfig = {
   chainId: parseInt(import.meta.env.VITE_CHAIN_ID || '11155111'),
-  rpcUrl: import.meta.env.VITE_RPC_URL || 'https://sepolia.infura.io/v3/b18fb7e6ca7045ac83c41157ab93f990',
+  rpcUrl: import.meta.env.VITE_RPC_URL || 'https://sepolia.infura.io/v3/YOUR_INFURA_PROJECT_ID',
 };
