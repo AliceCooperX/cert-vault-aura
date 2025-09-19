@@ -1,14 +1,14 @@
 import React from 'react';
 import { ConnectButton } from '@rainbow-me/rainbowkit';
 import { Button } from './ui/button';
-import { Wallet, Shield, Lock } from 'lucide-react';
+import { Wallet, FileText, Lock } from 'lucide-react';
 
 export function WalletConnect() {
   return (
     <div className="flex flex-col items-center space-y-4">
       <div className="text-center space-y-2">
         <div className="flex items-center justify-center space-x-2">
-          <Shield className="h-6 w-6 text-blue-600" />
+          <FileText className="h-6 w-6 text-blue-600" />
           <Lock className="h-6 w-6 text-green-600" />
         </div>
         <h2 className="text-2xl font-bold text-gray-900">

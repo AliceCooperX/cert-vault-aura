@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button";
-import { Shield, Wallet } from "lucide-react";
+import { FileText, Wallet } from "lucide-react";
 import { Link } from "react-router-dom";
 import { ConnectButton } from '@rainbow-me/rainbowkit';
 import { useAccount } from 'wagmi';
@@ -13,7 +13,7 @@ const Header = () => {
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-3">
             <div className="w-10 h-10 bg-gradient-academic rounded-lg flex items-center justify-center circuit-glow">
-              <Shield className="w-6 h-6 text-academic-gold" />
+              <FileText className="w-6 h-6 text-academic-gold" />
             </div>
             <span className="font-playfair font-bold text-xl text-academic-navy">CertVault Aura</span>
           </div>
