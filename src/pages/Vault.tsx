@@ -4,7 +4,7 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { FileText, Shield, Eye, Share2, Download, Search, Filter, ArrowLeft, CheckCircle, Calendar, Building, Lock, Unlock } from "lucide-react";
+import { FileText, Shield, Eye, Share2, Download, Search, Filter, ArrowLeft, CheckCircle, Calendar, Building, Lock, Unlock, AlertCircle } from "lucide-react";
 import { Link } from "react-router-dom";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
@@ -20,7 +20,7 @@ const Vault = () => {
   const [items, setItems] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
-  const { decryptCertificateData, instance, listCertificatesForHolder } = useCertVaultAura() as any;
+  const { decryptCertificateData, instance, listCertificatesForHolder, requestVerification } = useCertVaultAura() as any;
   const { address, isConnected } = useAccount();
 
   useEffect(() => {
@@ -32,14 +32,17 @@ const Vault = () => {
       setLoading(true);
       setLoadError(null);
       try {
+        console.log('[Vault] load:start', { address, isConnected });
         const list = await listCertificatesForHolder(address);
+        console.log('[Vault] load:list', { list });
         // map to UI schema
         const mapped = list.map((it: any) => ({
-          id: `CERT-${String(it.certId).padStart(4, '0')}`,
+          id: `CERT-${String(Number(it.certId) + 1).padStart(4, '0')}`,
           certId: it.certId,
           title: it.title || it.certType || 'Unknown',
           institution: it.institution || (it.issuer || '').slice(0, 10) + '…',
-          date: it.issueDate ? new Date(Number(it.issueDate) * 1000).toLocaleDateString() : '',
+          date: it.issueDate ? new Date(Number(it.issueDate) * 1000).toLocaleDateString() : 'Unknown',
+          expiryDate: it.expiryDate ? new Date(Number(it.expiryDate) * 1000).toLocaleDateString() : 'No expiry',
           type: it.certType || 'Unknown',
           verified: Boolean(it.isVerified),
           encrypted: true,
@@ -47,8 +50,10 @@ const Vault = () => {
           description: it.description || `IPFS: ${it.metadataHash || 'N/A'}`,
           ipfsHash: it.metadataHash,
         }));
+        console.log('[Vault] load:mapped', { mapped });
         setItems(mapped);
       } catch (e: any) {
+        console.error('[Vault] load:error', e);
         setLoadError(e?.message || 'Failed to load certificates');
       } finally {
         setLoading(false);
@@ -80,6 +85,22 @@ const Vault = () => {
       alert('Failed to decrypt certificate data');
     } finally {
       setIsDecrypting(false);
+    }
+  };
+
+  const handleRequestVerification = async (certId: number) => {
+    if (!isConnected || !address) {
+      alert('Please connect your wallet');
+      return;
+    }
+
+    try {
+      const verificationHash = `verify_${certId}_${Date.now()}`;
+      await requestVerification(certId, verificationHash);
+      alert('Verification request submitted successfully!');
+    } catch (err) {
+      console.error('Request verification failed:', err);
+      alert('Failed to request verification');
     }
   };
 
@@ -139,10 +160,15 @@ const Vault = () => {
                       <span className="text-sm text-muted-foreground">{cert.date || '-'}</span>
                     </div>
                     <div className="flex space-x-1">
-                      {cert.verified && (
+                      {cert.verified ? (
                         <Badge className="secure-badge">
                           <CheckCircle className="w-3 h-3 mr-1" />
                           Verified
+                        </Badge>
+                      ) : (
+                        <Badge variant="outline" className="text-orange-600 border-orange-600">
+                          <AlertCircle className="w-3 h-3 mr-1" />
+                          Unverified
                         </Badge>
                       )}
                       {cert.encrypted && (
@@ -162,19 +188,44 @@ const Vault = () => {
                     <span className="text-sm">{cert.institution}</span>
                   </div>
                   <Badge variant="outline" className="mb-4">{cert.type}</Badge>
+                  
+                  {/* Certificate thumbnail */}
+                  {cert.ipfsHash && (
+                    <div className="mb-4">
+                      <img
+                        src={`https://gateway.pinata.cloud/ipfs/${cert.ipfsHash}`}
+                        alt="Certificate thumbnail"
+                        className="w-full h-32 object-cover rounded-md border"
+                        onError={(e) => {
+                          (e.target as any).style.display = 'none';
+                        }}
+                      />
+                    </div>
+                  )}
 
                   <div className="flex items-center justify-between">
                     <div className="flex items-center space-x-1 text-sm text-muted-foreground">
                       <Eye className="w-4 h-4" />
                       <span>{cert.views} verified views</span>
                     </div>
-                    <Dialog>
-                      <DialogTrigger asChild>
-                        <Button size="sm" variant="outline" className="hover:bg-secure-emerald hover:text-white transition-all" onClick={() => setSelectedCert(cert)}>
-                          View Details
+                    <div className="flex space-x-2">
+                      {!cert.verified && (
+                        <Button 
+                          size="sm" 
+                          variant="outline" 
+                          className="text-orange-600 border-orange-600 hover:bg-orange-600 hover:text-white transition-all"
+                          onClick={() => handleRequestVerification(cert.certId)}
+                        >
+                          Request Verification
                         </Button>
-                      </DialogTrigger>
-                      <DialogContent className="max-w-2xl" aria-describedby="vault-dialog-desc">
+                      )}
+                      <Dialog>
+                        <DialogTrigger asChild>
+                          <Button size="sm" variant="outline" className="hover:bg-secure-emerald hover:text-white transition-all" onClick={() => setSelectedCert(cert)}>
+                            View Details
+                          </Button>
+                        </DialogTrigger>
+                        <DialogContent className="max-w-2xl" aria-describedby="vault-dialog-desc">
                         <DialogHeader>
                           <DialogTitle className="font-playfair text-2xl">Certificate Details</DialogTitle>
                         </DialogHeader>
@@ -217,14 +268,22 @@ const Vault = () => {
                                 <p className="text-muted-foreground">{selectedCert.description}</p>
                                 {selectedCert.ipfsHash && (
                                   <div className="mt-2">
-                                    <a
-                                      href={`https://gateway.pinata.cloud/ipfs/${selectedCert.ipfsHash}`}
-                                      target="_blank"
-                                      rel="noreferrer noopener"
-                                      className="text-blue-500 hover:underline"
-                                    >
-                                      Open document in new tab
-                                    </a>
+                                    <img
+                                      src={`https://gateway.pinata.cloud/ipfs/${selectedCert.ipfsHash}`}
+                                      alt="Certificate document"
+                                      className="max-w-full h-auto rounded-md border shadow-sm"
+                                      onError={(e) => {
+                                        (e.target as any).style.display = 'none';
+                                        // Show fallback link if image fails to load
+                                        const fallback = document.createElement('a');
+                                        fallback.href = `https://gateway.pinata.cloud/ipfs/${selectedCert.ipfsHash}`;
+                                        fallback.target = '_blank';
+                                        fallback.rel = 'noreferrer noopener';
+                                        fallback.className = 'text-blue-500 hover:underline';
+                                        fallback.textContent = 'Open document in new tab';
+                                        (e.target as any).parentNode.appendChild(fallback);
+                                      }}
+                                    />
                                   </div>
                                 )}
                               </div>
@@ -258,12 +317,12 @@ const Vault = () => {
                           </div>
                         )}
                       </DialogContent>
-                    </Dialog>
-                  </div>
-                </div>
-              </Card>
-            ))}
-          </div>
+                        </Dialog>
+                      </div>
+                    </div>
+                  </Card>
+                ))}
+              </div>
 
           {!loading && filteredCertificates.length === 0 && (
             <div className="text-center py-12">

@@ -220,7 +220,12 @@ contract CertVaultAura is SepoliaConfig {
     
     function getCertificateInfo(uint256 _certId) public view returns (
         string memory certType,
+        string memory title,
+        string memory institution,
+        string memory description,
         string memory metadataHash,
+        uint256 issueDate,
+        uint256 expiryDate,
         bool isVerified,
         address issuer,
         address holder
@@ -228,7 +233,12 @@ contract CertVaultAura is SepoliaConfig {
         Certificate storage cert = certificates[_certId];
         return (
             cert.certType,
+            cert.title,
+            cert.institution,
+            cert.description,
             cert.metadataHash,
+            cert.issueDate,
+            cert.expiryDate,
             cert.isVerified,
             cert.issuer,
             cert.holder

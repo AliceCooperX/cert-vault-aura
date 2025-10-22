@@ -32,6 +32,7 @@ const AddCertificate = () => {
   const { issueCertificate, isLoading, error, registerIssuer, isIssuerAuthorized, address: walletAddress } = useCertVaultAura();
   const { address, isConnected } = useAccount();
   const [isAuthorized, setIsAuthorized] = useState<boolean | null>(null);
+  const [certificateId, setCertificateId] = useState<string | null>(null);
 
   useEffect(() => {
     (async () => {
@@ -97,7 +98,7 @@ const AddCertificate = () => {
       console.log('[AddCertificate] metadataHash', metadataHash);
       
       console.time('[AddCertificate] issueCertificate');
-      await issueCertificate(
+      const certificateId = await issueCertificate(
         address,
         formData.type,
         formData.title,
@@ -110,7 +111,8 @@ const AddCertificate = () => {
         grade
       );
       console.timeEnd('[AddCertificate] issueCertificate');
-      console.log('[AddCertificate] handleSubmit:success');
+      console.log('[AddCertificate] handleSubmit:success', { certificateId });
+      setCertificateId(certificateId);
       
       toast({
         title: "Certificate added successfully",
@@ -439,7 +441,7 @@ const AddCertificate = () => {
                 
                 <div className="space-y-4">
                   <Badge className="secure-badge text-lg px-4 py-2">
-                    Certificate ID: CERT-2024-001
+                    Certificate ID: {certificateId ? `CERT-${String(Number(certificateId) + 1).padStart(4, '0')}` : 'CERT-0001'}
                   </Badge>
                   
                   <p className="text-muted-foreground">

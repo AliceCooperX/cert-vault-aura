@@ -123,6 +123,16 @@ export function useCertVaultAura() {
       });
       console.timeEnd('[useCertVaultAura] write.issueCertificate');
       console.log('[useCertVaultAura] tx sent', tx);
+      
+      // Wait for transaction receipt to get the certificate ID
+      const receipt = await tx.wait();
+      console.log('[useCertVaultAura] tx receipt', receipt);
+      
+      // Get the certificate ID from the transaction logs
+      const certId = receipt.logs[0]?.topics[1] ? BigInt(receipt.logs[0].topics[1]).toString() : '0';
+      console.log('[useCertVaultAura] certificate ID', certId);
+      
+      return certId;
     } catch (err) {
       console.error('[useCertVaultAura] issueCertificate:error', err);
       setError(err instanceof Error ? err.message : 'Failed to issue certificate');
@@ -139,14 +149,40 @@ export function useCertVaultAura() {
       setIsLoading(true);
       setError(null);
       
-      await writeContractAsync({
+      const tx = await writeContractAsync({
         address: contractConfig.address as `0x${string}`,
         abi: contractConfig.abi,
         functionName: 'requestVerification',
         args: [certId, verificationHash],
       });
+      
+      console.log('[useCertVaultAura] requestVerification:tx', tx);
+      return tx;
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to request verification');
+      throw err;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Process Verification (only verifier can call this)
+  const processVerification = async (requestId: number, isApproved: boolean) => {
+    try {
+      setIsLoading(true);
+      setError(null);
+      
+      const tx = await writeContractAsync({
+        address: contractConfig.address as `0x${string}`,
+        abi: contractConfig.abi,
+        functionName: 'processVerification',
+        args: [requestId, isApproved],
+      });
+      
+      console.log('[useCertVaultAura] processVerification:tx', tx);
+      return tx;
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to process verification');
       throw err;
     } finally {
       setIsLoading(false);
@@ -335,10 +371,10 @@ export function useCertVaultAura() {
         functionName: 'getCertificateInfo',
         args: [certId],
       });
-      const [certType, metadataHash, isVerified, issuer, holder] = info as any[];
+      const [certType, title, institution, description, metadataHash, issueDate, expiryDate, isVerified, issuer, holder] = info as any[];
       const exists = issuer && issuer !== '0x0000000000000000000000000000000000000000';
       const result = Boolean(exists);
-      console.log('[useCertVaultAura] verifyCertificate:info', { certType, metadataHash, isVerified, issuer, holder, result });
+      console.log('[useCertVaultAura] verifyCertificate:info', { certType, title, institution, description, metadataHash, issueDate, expiryDate, isVerified, issuer, holder, result });
       return result;
     } catch (err) {
       console.error('[useCertVaultAura] verifyCertificate:error', err);
@@ -376,8 +412,8 @@ export function useCertVaultAura() {
       });
       console.log('[useCertVaultAura] getCertificateDetails:result', result);
       
-      const [certType, metadataHash, isVerified, issuer, holder] = result as any[];
-      return { certType, metadataHash, isVerified, issuer, holder } as any;
+      const [certType, title, institution, description, metadataHash, issueDate, expiryDate, isVerified, issuer, holder] = result as any[];
+      return { certType, title, institution, description, metadataHash, issueDate, expiryDate, isVerified, issuer, holder } as any;
     } catch (err) {
       console.error('[useCertVaultAura] getCertificateDetails:error', err);
       setError(err instanceof Error ? err.message : 'Failed to get certificate details');
@@ -408,24 +444,29 @@ export function useCertVaultAura() {
       functionName: 'getCertificateInfo',
       args: [certId],
     });
-    // (certType, metadataHash, isVerified, issuer, holder)
-    const [certType, metadataHash, isVerified, issuer, holder] = info as any[];
-    return { certId, certType, metadataHash, isVerified, issuer, holder };
+    // (certType, title, institution, description, metadataHash, issueDate, expiryDate, isVerified, issuer, holder)
+    const [certType, title, institution, description, metadataHash, issueDate, expiryDate, isVerified, issuer, holder] = info as any[];
+    return { certId, certType, title, institution, description, metadataHash, issueDate, expiryDate, isVerified, issuer, holder };
   };
 
   const listCertificatesForHolder = async (holderAddr: string) => {
+    console.log('[useCertVaultAura] listCertificatesForHolder:start', { holderAddr });
     const total = await getCertCounter();
+    console.log('[useCertVaultAura] listCertificatesForHolder:total', { total });
     const results: any[] = [];
     for (let i = 0; i < total; i++) {
       try {
         const info = await getCertificateInfoById(i);
+        console.log('[useCertVaultAura] listCertificatesForHolder:cert', { i, info });
         if (info.holder?.toLowerCase() === holderAddr.toLowerCase()) {
+          console.log('[useCertVaultAura] listCertificatesForHolder:match', { i, info });
           results.push(info);
         }
       } catch (e) {
         console.warn('[useCertVaultAura] getCertificateInfoById failed', i, e);
       }
     }
+    console.log('[useCertVaultAura] listCertificatesForHolder:results', { results });
     return results;
   };
 
@@ -433,6 +474,7 @@ export function useCertVaultAura() {
     registerIssuer,
     issueCertificate,
     requestVerification,
+    processVerification,
     revokeCertificate,
     encryptCertificateData,
     updateCertificateWithEncryptedData,

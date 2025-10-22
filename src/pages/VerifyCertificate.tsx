@@ -16,7 +16,7 @@ const VerifyCertificate = () => {
   const [verificationResult, setVerificationResult] = useState<any>(null);
   const [isVerifying, setIsVerifying] = useState(false);
   const { toast } = useToast();
-  const { verifyCertificate, getCertificateDetails } = useCertVaultAura();
+  const { verifyCertificate, getCertificateDetails, processVerification } = useCertVaultAura();
   const { address, isConnected } = useAccount();
 
   const handleVerify = async () => {
