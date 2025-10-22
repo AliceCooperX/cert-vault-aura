@@ -48,9 +48,12 @@ const VerifyCertificate = () => {
       let certId: number;
       if (certificateId.startsWith('CERT-')) {
         const numericPart = certificateId.replace('CERT-', '');
-        certId = parseInt(numericPart) - 1; // Convert to 0-based index
+        const displayId = parseInt(numericPart);
+        certId = displayId - 1; // Convert to 0-based index
+        console.log('[VerifyCertificate] parsed certId', { certificateId, displayId, certId });
       } else {
         certId = parseInt(certificateId);
+        console.log('[VerifyCertificate] parsed certId', { certificateId, certId });
       }
       
       console.log('[VerifyCertificate] parsed certId', { certId });
@@ -129,11 +132,20 @@ const VerifyCertificate = () => {
       // In a real implementation, you'd need to track verification requests
       const requestId = 1; // This should come from the verification request system
       
-      const tx = await processVerification(requestId, isApproved);
-      console.log('[VerifyCertificate] processVerification tx', tx);
+      const txHash = await processVerification(requestId, isApproved);
+      console.log('[VerifyCertificate] processVerification tx', txHash);
       
-      // Wait for transaction confirmation
-      const receipt = await tx.wait();
+      // Wait for transaction confirmation using waitForTransactionReceipt
+      const { waitForTransactionReceipt } = await import('viem');
+      const publicClient = (window as any).wagmi?.getPublicClient();
+      if (!publicClient) {
+        throw new Error('No public client available');
+      }
+      
+      const receipt = await waitForTransactionReceipt(publicClient, {
+        hash: txHash as `0x${string}`,
+        timeout: 60_000, // 60 seconds timeout
+      });
       console.log('[VerifyCertificate] processVerification receipt', receipt);
       
       // Refresh the certificate details to get updated status

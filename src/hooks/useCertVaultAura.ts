@@ -115,17 +115,21 @@ export function useCertVaultAura() {
       console.log('[useCertVaultAura] formatted', { handlesCount: handles.length, handles: handles.slice(0, 4), proofLen: proof.length });
       
       console.time('[useCertVaultAura] write.issueCertificate');
-      const tx = await writeContractAsync({
+      const txHash = await writeContractAsync({
         address: contractConfig.address as `0x${string}`,
         abi: contractConfig.abi,
         functionName: 'issueCertificate',
         args: [holder, certType, title, institution, description, metadataHash, handles[0], handles[1], handles[2], handles[3], proof],
       });
       console.timeEnd('[useCertVaultAura] write.issueCertificate');
-      console.log('[useCertVaultAura] tx sent', tx);
+      console.log('[useCertVaultAura] tx sent', txHash);
       
-      // Wait for transaction receipt to get the certificate ID
-      const receipt = await tx.wait();
+      // Wait for transaction receipt using waitForTransactionReceipt
+      const { waitForTransactionReceipt } = await import('viem');
+      const receipt = await waitForTransactionReceipt(publicClient, {
+        hash: txHash as `0x${string}`,
+        timeout: 60_000, // 60 seconds timeout
+      });
       console.log('[useCertVaultAura] tx receipt', receipt);
       
       // Get the certificate ID from the transaction logs
@@ -412,8 +416,9 @@ export function useCertVaultAura() {
       });
       console.log('[useCertVaultAura] getCertificateDetails:result', result);
       
-      const [certType, title, institution, description, metadataHash, issueDate, expiryDate, isVerified, issuer, holder] = result as any[];
-      return { certType, title, institution, description, metadataHash, issueDate, expiryDate, isVerified, issuer, holder } as any;
+      const [certType, title, institution, description, metadataHash, issueDate, expiryDate, isVerified, issuer, holder, verifierAddress] = result as any[];
+      console.log('[useCertVaultAura] getCertificateDetails:verifierAddress', verifierAddress);
+      return { certType, title, institution, description, metadataHash, issueDate, expiryDate, isVerified, issuer, holder, verifier: verifierAddress } as any;
     } catch (err) {
       console.error('[useCertVaultAura] getCertificateDetails:error', err);
       setError(err instanceof Error ? err.message : 'Failed to get certificate details');
@@ -446,6 +451,11 @@ export function useCertVaultAura() {
     });
     // (certType, title, institution, description, metadataHash, issueDate, expiryDate, isVerified, issuer, holder, verifierAddress)
     const [certType, title, institution, description, metadataHash, issueDate, expiryDate, isVerified, issuer, holder, verifierAddress] = info as any[];
+    console.log('[useCertVaultAura] getCertificateInfoById:result', { 
+      certId, certType, title, institution, description, metadataHash, 
+      issueDate, expiryDate, isVerified, issuer, holder, verifierAddress 
+    });
+    console.log('[useCertVaultAura] getCertificateInfoById:verifierAddress', verifierAddress);
     return { certId, certType, title, institution, description, metadataHash, issueDate, expiryDate, isVerified, issuer, holder, verifier: verifierAddress };
   };
 
