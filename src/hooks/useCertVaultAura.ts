@@ -170,10 +170,21 @@ export function useCertVaultAura() {
       });
       
       console.log('[useCertVaultAura] requestVerification:receipt', receipt);
+      console.log('[useCertVaultAura] requestVerification:logs', receipt.logs);
       
       // Extract requestId from the transaction logs
       // The requestId is returned by the requestVerification function
-      const requestId = receipt.logs[0]?.topics[1] ? BigInt(receipt.logs[0].topics[1]).toString() : '0';
+      let requestId = '0';
+      if (receipt.logs && receipt.logs.length > 0) {
+        // Look for VerificationRequested event
+        const verificationEvent = receipt.logs.find(log => 
+          log.topics && log.topics.length > 0 && 
+          log.topics[0] === '0x' + 'VerificationRequested'.padEnd(64, '0').slice(2)
+        );
+        if (verificationEvent && verificationEvent.topics[1]) {
+          requestId = BigInt(verificationEvent.topics[1]).toString();
+        }
+      }
       console.log('[useCertVaultAura] requestVerification:requestId', requestId);
       
       return { txHash, requestId: parseInt(requestId) };

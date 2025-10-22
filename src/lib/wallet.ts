@@ -16,7 +16,7 @@ export const config = getDefaultConfig({
 
 // Contract Configuration
 export const contractConfig = {
-  address: '0x988234c0635997adCbBD0a1bb7CB9c6CbdC447CF' as `0x${string}`,
+  address: '0xe5FFE2e4c1686CE2F8ddcb610D9769323aC87293' as `0x${string}`,
   abi: (CertVaultAuraArtifact as any)?.abi ?? [],
 } as const;
 

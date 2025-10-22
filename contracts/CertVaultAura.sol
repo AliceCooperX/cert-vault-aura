@@ -29,7 +29,6 @@ contract CertVaultAura is SepoliaConfig {
     struct VerificationRequest {
         uint256 requestId;
         uint256 certId;
-        uint256 verifierId;
         uint8 verificationStatus; // 0: pending, 1: approved, 2: rejected
         bool isProcessed;
         string verificationHash;
@@ -155,14 +154,13 @@ contract CertVaultAura is SepoliaConfig {
         string memory _verificationHash
     ) public returns (uint256) {
         require(certificates[_certId].issuer != address(0), "Certificate does not exist");
-        require(certificates[_certId].holder == msg.sender, "Only certificate holder can request verification");
+        // Anyone can request verification (like fhe-diploma-vault)
         
         uint256 requestId = requestCounter++;
         
         verificationRequests[requestId] = VerificationRequest({
             requestId: requestId,
             certId: _certId,
-            verifierId: requestId, // Use requestId as verifierId for uniqueness
             verificationStatus: 0, // Pending
             isProcessed: false,
             verificationHash: _verificationHash,
