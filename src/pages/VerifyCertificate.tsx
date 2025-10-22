@@ -3,15 +3,13 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Badge } from '@/components/ui/badge';
-import { Search, Shield, CheckCircle, AlertCircle, Eye, ExternalLink, Lock, FileText } from 'lucide-react';
+import { Search, Shield, CheckCircle, AlertCircle, Eye } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import { useToast } from '@/hooks/use-toast';
 import { useCertVaultAura } from '@/hooks/useCertVaultAura';
 import { useAccount } from 'wagmi';
-import { getIPFSImageUrl } from '@/utils/ipfs';
 
 const VerifyCertificate = () => {
   const [certificateId, setCertificateId] = useState('');
@@ -87,19 +85,6 @@ const VerifyCertificate = () => {
     }
   };
 
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case 'active':
-        return <Badge className="bg-green-500/10 text-green-400 border-green-500/20">Active</Badge>;
-      case 'expired':
-        return <Badge className="bg-red-500/10 text-red-400 border-red-500/20">Expired</Badge>;
-      case 'revoked':
-        return <Badge className="bg-gray-500/10 text-gray-400 border-gray-500/20">Revoked</Badge>;
-      default:
-        return <Badge className="bg-yellow-500/10 text-yellow-400 border-yellow-500/20">Unknown</Badge>;
-    }
-  };
-
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
       <Header />
@@ -141,17 +126,7 @@ const VerifyCertificate = () => {
                       disabled={isVerifying || !certificateId.trim()}
                       className="bg-gradient-secure hover:shadow-secure text-white"
                     >
-                      {isVerifying ? (
-                        <>
-                          <Lock className="w-4 h-4 mr-2 animate-spin" />
-                          Verifying...
-                        </>
-                      ) : (
-                        <>
-                          <Search className="w-4 h-4 mr-2" />
-                          Verify
-                        </>
-                      )}
+                      {isVerifying ? 'Verifying...' : 'Verify'}
                     </Button>
                   </div>
                 </div>
@@ -196,13 +171,6 @@ const VerifyCertificate = () => {
                           <Label className="text-sm font-medium text-muted-foreground">Certificate Type</Label>
                           <p className="font-medium">{verificationResult.details.type || 'Unknown'}</p>
                         </div>
-                        
-                        <div>
-                          <Label className="text-sm font-medium text-muted-foreground">Status</Label>
-                          <div className="mt-1">
-                            {getStatusBadge(verificationResult.details.status || 'active')}
-                          </div>
-                        </div>
                       </div>
                       
                       <div className="space-y-4">
@@ -229,64 +197,6 @@ const VerifyCertificate = () => {
                         <div>
                           <Label className="text-sm font-medium text-muted-foreground">Blockchain</Label>
                           <p className="font-medium">Sepolia Testnet</p>
-                        </div>
-                      </div>
-                    </div>
-
-                    {verificationResult.details.metadataHash && (
-                      <div className="border-t pt-6">
-                        <h4 className="font-semibold mb-4">Certificate Document</h4>
-                        <div className="flex items-center space-x-4">
-                          <div className="flex items-center space-x-2">
-                            <FileText className="w-5 h-5 text-blue-400" />
-                            <span className="text-sm">IPFS Hash: {verificationResult.details.metadataHash}</span>
-                          </div>
-                          <a
-                            href={getIPFSImageUrl(verificationResult.details.metadataHash)}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="inline-flex items-center space-x-2 text-blue-400 hover:text-blue-300 transition-colors"
-                          >
-                            <ExternalLink className="w-4 h-4" />
-                            <span>View Document</span>
-                          </a>
-                        </div>
-                      </div>
-                    )}
-
-                    <div className="border-t pt-6">
-                      <h4 className="font-semibold mb-4">Security Features</h4>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div className="flex items-center space-x-3 p-3 bg-green-500/10 rounded-lg">
-                          <CheckCircle className="w-5 h-5 text-green-400" />
-                          <div>
-                            <p className="font-medium text-sm">Blockchain Verified</p>
-                            <p className="text-xs text-muted-foreground">Certificate exists on blockchain</p>
-                          </div>
-                        </div>
-                        
-                        <div className="flex items-center space-x-3 p-3 bg-blue-500/10 rounded-lg">
-                          <Shield className="w-5 h-5 text-blue-400" />
-                          <div>
-                            <p className="font-medium text-sm">FHE Encrypted</p>
-                            <p className="text-xs text-muted-foreground">Sensitive data encrypted</p>
-                          </div>
-                        </div>
-                        
-                        <div className="flex items-center space-x-3 p-3 bg-purple-500/10 rounded-lg">
-                          <Lock className="w-5 h-5 text-purple-400" />
-                          <div>
-                            <p className="font-medium text-sm">Immutable Record</p>
-                            <p className="text-xs text-muted-foreground">Cannot be tampered with</p>
-                          </div>
-                        </div>
-                        
-                        <div className="flex items-center space-x-3 p-3 bg-orange-500/10 rounded-lg">
-                          <Eye className="w-5 h-5 text-orange-400" />
-                          <div>
-                            <p className="font-medium text-sm">Public Verification</p>
-                            <p className="text-xs text-muted-foreground">Anyone can verify</p>
-                          </div>
                         </div>
                       </div>
                     </div>
