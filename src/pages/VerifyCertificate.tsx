@@ -18,7 +18,7 @@ const VerifyCertificate = () => {
   const [isQuerying, setIsQuerying] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const { toast } = useToast();
-  const { verifyCertificate, getCertificateDetails, processVerification } = useCertVaultAura();
+  const { verifyCertificate, getCertificateDetails, requestVerification, processVerification } = useCertVaultAura();
   const { address, isConnected } = useAccount();
 
   const handleQuery = async () => {
@@ -128,9 +128,12 @@ const VerifyCertificate = () => {
         return;
       }
 
-      // For now, we'll use a mock requestId since we don't have the actual verification request system
-      // In a real implementation, you'd need to track verification requests
-      const requestId = 1; // This should come from the verification request system
+      // First, request verification to get the requestId
+      const verificationHash = `verification_${Date.now()}`; // Generate a unique hash
+      const requestResult = await requestVerification(queryResult.certId, verificationHash);
+      const requestId = requestResult.requestId;
+      
+      console.log('[VerifyCertificate] requestVerification result', { requestId, txHash: requestResult.txHash });
       
       const txHash = await processVerification(requestId, isApproved);
       console.log('[VerifyCertificate] processVerification tx', txHash);

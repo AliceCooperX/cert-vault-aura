@@ -153,15 +153,30 @@ export function useCertVaultAura() {
       setIsLoading(true);
       setError(null);
       
-      const tx = await writeContractAsync({
+      const txHash = await writeContractAsync({
         address: contractConfig.address as `0x${string}`,
         abi: contractConfig.abi,
         functionName: 'requestVerification',
         args: [certId, verificationHash],
       });
       
-      console.log('[useCertVaultAura] requestVerification:tx', tx);
-      return tx;
+      console.log('[useCertVaultAura] requestVerification:tx', txHash);
+      
+      // Wait for transaction receipt to get the requestId from logs
+      const { waitForTransactionReceipt } = await import('viem');
+      const receipt = await waitForTransactionReceipt(publicClient, {
+        hash: txHash as `0x${string}`,
+        timeout: 60_000, // 60 seconds timeout
+      });
+      
+      console.log('[useCertVaultAura] requestVerification:receipt', receipt);
+      
+      // Extract requestId from the transaction logs
+      // The requestId is returned by the requestVerification function
+      const requestId = receipt.logs[0]?.topics[1] ? BigInt(receipt.logs[0].topics[1]).toString() : '0';
+      console.log('[useCertVaultAura] requestVerification:requestId', requestId);
+      
+      return { txHash, requestId: parseInt(requestId) };
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to request verification');
       throw err;
