@@ -4,10 +4,12 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { FileText, Shield, Eye, Share2, Download, Search, Filter, ArrowLeft, CheckCircle, Calendar, Building } from "lucide-react";
+import { FileText, Shield, Eye, Share2, Download, Search, Filter, ArrowLeft, CheckCircle, Calendar, Building, Lock, Unlock } from "lucide-react";
 import { Link } from "react-router-dom";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
+import { useCertVaultAura } from "@/hooks/useCertVaultAura";
+import { useAccount } from "wagmi";
 import scrollBackground from "@/assets/scroll-background.png";
 
 const certificates = [
@@ -60,11 +62,35 @@ const certificates = [
 const Vault = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCert, setSelectedCert] = useState<typeof certificates[0] | null>(null);
+  const [decryptedData, setDecryptedData] = useState<{[key: string]: any}>({});
+  const [isDecrypting, setIsDecrypting] = useState(false);
+  const { decryptCertificateData, instance } = useCertVaultAura();
+  const { address, isConnected } = useAccount();
 
   const filteredCertificates = certificates.filter(cert =>
     cert.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
     cert.institution.toLowerCase().includes(searchTerm.toLowerCase())
   );
+
+  const handleDecrypt = async (certId: string) => {
+    if (!isConnected || !address || !instance) {
+      alert('Please connect your wallet and ensure FHE service is ready');
+      return;
+    }
+
+    setIsDecrypting(true);
+    try {
+      // This would be the actual certificate ID from the contract
+      const certIdNum = parseInt(certId.split('-')[2]);
+      const decrypted = await decryptCertificateData(certIdNum);
+      setDecryptedData(prev => ({...prev, [certId]: decrypted}));
+    } catch (error) {
+      console.error('Decryption failed:', error);
+      alert('Failed to decrypt certificate data');
+    } finally {
+      setIsDecrypting(false);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-background font-inter">
@@ -137,6 +163,21 @@ const Vault = () => {
                           <Shield className="w-3 h-3 text-white" />
                         </div>
                       )}
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => handleDecrypt(cert.id)}
+                        disabled={isDecrypting}
+                        className="ml-2"
+                      >
+                        {isDecrypting ? (
+                          <Lock className="w-3 h-3 animate-spin" />
+                        ) : decryptedData[cert.id] ? (
+                          <Unlock className="w-3 h-3" />
+                        ) : (
+                          <Lock className="w-3 h-3" />
+                        )}
+                      </Button>
                     </div>
                   </div>
 
@@ -216,6 +257,22 @@ const Vault = () => {
                                 <h4 className="font-semibold mb-1">Verification Statistics</h4>
                                 <p className="text-muted-foreground">{selectedCert.views} verified employer views</p>
                               </div>
+                              
+                              {decryptedData[selectedCert.id] && (
+                                <div className="border-t pt-4">
+                                  <h4 className="font-semibold mb-2 text-secure-emerald">Decrypted Data (FHE)</h4>
+                                  <div className="grid md:grid-cols-2 gap-4">
+                                    <div>
+                                      <p className="text-sm text-muted-foreground">Score</p>
+                                      <p className="font-medium">{decryptedData[selectedCert.id].score || 'N/A'}</p>
+                                    </div>
+                                    <div>
+                                      <p className="text-sm text-muted-foreground">Grade</p>
+                                      <p className="font-medium">{decryptedData[selectedCert.id].grade || 'N/A'}</p>
+                                    </div>
+                                  </div>
+                                </div>
+                              )}
                             </div>
                             
                             <div className="flex space-x-4">

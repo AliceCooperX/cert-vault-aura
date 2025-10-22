@@ -26,6 +26,9 @@ const Header = () => {
               <Link to="/add-certificate" className="text-foreground hover:text-academic-gold transition-colors">
                 Add Certificate
               </Link>
+              <Link to="/verify" className="text-foreground hover:text-academic-gold transition-colors">
+                Verify
+              </Link>
               <Link to="/security" className="text-foreground hover:text-academic-gold transition-colors">
                 Security
               </Link>

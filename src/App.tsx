@@ -8,6 +8,7 @@ import NotFound from "./pages/NotFound";
 import AddCertificate from "./pages/AddCertificate";
 import Vault from "./pages/Vault";
 import Security from "./pages/Security";
+import VerifyCertificate from "./pages/VerifyCertificate";
 
 const App = () => (
   <WalletProvider>
@@ -19,6 +20,7 @@ const App = () => (
           <Route path="/" element={<Index />} />
           <Route path="/add-certificate" element={<AddCertificate />} />
           <Route path="/vault" element={<Vault />} />
+          <Route path="/verify" element={<VerifyCertificate />} />
           <Route path="/security" element={<Security />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />

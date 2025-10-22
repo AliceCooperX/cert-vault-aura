@@ -6,16 +6,31 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Upload, FileText, Shield, CheckCircle, ArrowLeft } from "lucide-react";
+import { Upload, FileText, Shield, CheckCircle, ArrowLeft, Lock } from "lucide-react";
 import { Link } from "react-router-dom";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
+import FileUpload from "@/components/FileUpload";
 import { useToast } from "@/hooks/use-toast";
+import { useCertVaultAura } from "@/hooks/useCertVaultAura";
+import { useAccount } from "wagmi";
 
 const AddCertificate = () => {
   const [step, setStep] = useState(1);
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
+  const [ipfsFile, setIpfsFile] = useState<{ hash: string; url: string; gateway: string } | null>(null);
+  const [formData, setFormData] = useState({
+    title: '',
+    institution: '',
+    date: '',
+    type: '',
+    description: '',
+    score: '',
+    grade: ''
+  });
   const { toast } = useToast();
+  const { issueCertificate, isLoading, error } = useCertVaultAura();
+  const { address, isConnected } = useAccount();
 
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -28,12 +43,59 @@ const AddCertificate = () => {
     }
   };
 
-  const handleSubmit = () => {
+  const handleIPFSFileUploaded = (result: { hash: string; url: string; gateway: string }) => {
+    setIpfsFile(result);
     toast({
-      title: "Certificate added successfully",
-      description: "Your certificate has been encrypted and added to your vault.",
+      title: "File Uploaded to IPFS",
+      description: `Certificate file uploaded to IPFS: ${result.hash}`,
     });
-    setStep(4);
+  };
+
+  const handleIPFSFileRemoved = () => {
+    setIpfsFile(null);
+  };
+
+  const handleSubmit = async () => {
+    if (!isConnected || !address) {
+      toast({
+        title: "Wallet not connected",
+        description: "Please connect your wallet to continue.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    try {
+      const issueDate = new Date(formData.date).getTime() / 1000;
+      const expiryDate = issueDate + (365 * 24 * 60 * 60); // 1 year from issue date
+      const score = parseInt(formData.score) || 0;
+      const grade = parseInt(formData.grade) || 0;
+      
+      // Use IPFS hash if available, otherwise use timestamp hash
+      const metadataHash = ipfsFile ? ipfsFile.hash : `hash_${Date.now()}`;
+      
+      await issueCertificate(
+        address,
+        formData.type,
+        metadataHash, // IPFS hash or fallback hash
+        issueDate,
+        expiryDate,
+        score,
+        grade
+      );
+      
+      toast({
+        title: "Certificate added successfully",
+        description: "Your certificate has been encrypted with FHE and added to your vault.",
+      });
+      setStep(4);
+    } catch (err) {
+      toast({
+        title: "Failed to add certificate",
+        description: error || "An error occurred while adding your certificate.",
+        variant: "destructive"
+      });
+    }
   };
 
   return (
@@ -84,41 +146,54 @@ const AddCertificate = () => {
               <div className="space-y-6">
                 <h3 className="font-playfair text-2xl font-semibold text-center">Upload Your Certificate</h3>
                 
-                <div className="border-2 border-dashed border-muted rounded-lg p-12 text-center">
-                  <Upload className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-                  <p className="text-lg mb-4">Drag and drop your certificate here, or click to browse</p>
-                  <input
-                    type="file"
-                    accept=".pdf,.jpg,.jpeg,.png"
-                    onChange={handleFileUpload}
-                    className="hidden"
-                    id="file-upload"
-                  />
-                  <label htmlFor="file-upload">
-                    <Button className="bg-gradient-secure hover:shadow-secure text-white">
-                      Choose File
-                    </Button>
-                  </label>
-                  <p className="text-sm text-muted-foreground mt-2">
-                    Supported formats: PDF, JPG, PNG (Max 10MB)
-                  </p>
-                </div>
+                {/* IPFS File Upload Component */}
+                <FileUpload
+                  onFileUploaded={handleIPFSFileUploaded}
+                  onFileRemoved={handleIPFSFileRemoved}
+                  uploadedFile={ipfsFile}
+                  accept=".pdf,.jpg,.jpeg,.png,.txt"
+                  maxSizeMB={10}
+                />
 
-                {uploadedFile && (
-                  <div className="flex items-center space-x-3 p-4 bg-muted/50 rounded-lg">
-                    <FileText className="w-6 h-6 text-secure-emerald" />
-                    <div>
-                      <p className="font-medium">{uploadedFile.name}</p>
-                      <p className="text-sm text-muted-foreground">
-                        {(uploadedFile.size / 1024 / 1024).toFixed(2)} MB
-                      </p>
-                    </div>
+                {/* Legacy file upload for comparison */}
+                <div className="border-t pt-4">
+                  <p className="text-sm text-muted-foreground mb-4">Or use traditional file upload:</p>
+                  <div className="border-2 border-dashed border-muted rounded-lg p-8 text-center">
+                    <Upload className="w-8 h-8 text-muted-foreground mx-auto mb-2" />
+                    <p className="text-sm mb-2">Drag and drop your certificate here, or click to browse</p>
+                    <input
+                      type="file"
+                      accept=".pdf,.jpg,.jpeg,.png"
+                      onChange={handleFileUpload}
+                      className="hidden"
+                      id="file-upload"
+                    />
+                    <label htmlFor="file-upload">
+                      <Button variant="outline" size="sm">
+                        Choose File
+                      </Button>
+                    </label>
+                    <p className="text-xs text-muted-foreground mt-2">
+                      Supported formats: PDF, JPG, PNG (Max 10MB)
+                    </p>
                   </div>
-                )}
+
+                  {uploadedFile && (
+                    <div className="flex items-center space-x-3 p-4 bg-muted/50 rounded-lg mt-4">
+                      <FileText className="w-6 h-6 text-secure-emerald" />
+                      <div>
+                        <p className="font-medium">{uploadedFile.name}</p>
+                        <p className="text-sm text-muted-foreground">
+                          {(uploadedFile.size / 1024 / 1024).toFixed(2)} MB
+                        </p>
+                      </div>
+                    </div>
+                  )}
+                </div>
 
                 <Button 
                   onClick={() => setStep(2)} 
-                  disabled={!uploadedFile}
+                  disabled={!uploadedFile && !ipfsFile}
                   className="w-full bg-gradient-secure hover:shadow-secure text-white"
                 >
                   Continue to Details
@@ -133,22 +208,37 @@ const AddCertificate = () => {
                 <div className="grid md:grid-cols-2 gap-6">
                   <div className="space-y-2">
                     <Label htmlFor="title">Certificate Title</Label>
-                    <Input id="title" placeholder="e.g., Bachelor of Computer Science" />
+                    <Input 
+                      id="title" 
+                      placeholder="e.g., Bachelor of Computer Science"
+                      value={formData.title}
+                      onChange={(e) => setFormData({...formData, title: e.target.value})}
+                    />
                   </div>
                   
                   <div className="space-y-2">
                     <Label htmlFor="institution">Institution</Label>
-                    <Input id="institution" placeholder="e.g., Stanford University" />
+                    <Input 
+                      id="institution" 
+                      placeholder="e.g., Stanford University"
+                      value={formData.institution}
+                      onChange={(e) => setFormData({...formData, institution: e.target.value})}
+                    />
                   </div>
                   
                   <div className="space-y-2">
                     <Label htmlFor="date">Completion Date</Label>
-                    <Input id="date" type="date" />
+                    <Input 
+                      id="date" 
+                      type="date"
+                      value={formData.date}
+                      onChange={(e) => setFormData({...formData, date: e.target.value})}
+                    />
                   </div>
                   
                   <div className="space-y-2">
                     <Label htmlFor="type">Certificate Type</Label>
-                    <Select>
+                    <Select onValueChange={(value) => setFormData({...formData, type: value})}>
                       <SelectTrigger>
                         <SelectValue placeholder="Select type" />
                       </SelectTrigger>
@@ -160,6 +250,32 @@ const AddCertificate = () => {
                       </SelectContent>
                     </Select>
                   </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="score">Score (0-100)</Label>
+                    <Input 
+                      id="score" 
+                      type="number" 
+                      min="0" 
+                      max="100" 
+                      placeholder="e.g., 85"
+                      value={formData.score}
+                      onChange={(e) => setFormData({...formData, score: e.target.value})}
+                    />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="grade">Grade (0-100)</Label>
+                    <Input 
+                      id="grade" 
+                      type="number" 
+                      min="0" 
+                      max="100" 
+                      placeholder="e.g., 90"
+                      value={formData.grade}
+                      onChange={(e) => setFormData({...formData, grade: e.target.value})}
+                    />
+                  </div>
                 </div>
                 
                 <div className="space-y-2">
@@ -168,6 +284,8 @@ const AddCertificate = () => {
                     id="description" 
                     placeholder="Add any additional details about this certificate..."
                     rows={3}
+                    value={formData.description}
+                    onChange={(e) => setFormData({...formData, description: e.target.value})}
                   />
                 </div>
 
@@ -207,10 +325,10 @@ const AddCertificate = () => {
                   </div>
                   
                   <div className="flex items-center space-x-3 p-4 bg-academic-gold/10 rounded-lg">
-                    <Shield className="w-6 h-6 text-academic-gold animate-spin" />
+                    <Lock className="w-6 h-6 text-academic-gold animate-spin" />
                     <div>
-                      <p className="font-medium">Blockchain Verification</p>
-                      <p className="text-sm text-muted-foreground">Creating immutable record...</p>
+                      <p className="font-medium">FHE Encryption Process</p>
+                      <p className="text-sm text-muted-foreground">Encrypting sensitive data with homomorphic encryption...</p>
                     </div>
                   </div>
                 </div>
@@ -218,10 +336,11 @@ const AddCertificate = () => {
                 <div className="p-6 bg-muted/50 rounded-lg">
                   <h4 className="font-semibold mb-2">What happens next?</h4>
                   <ul className="text-sm text-muted-foreground space-y-1">
-                    <li>• Your certificate will be encrypted with AES-256 encryption</li>
+                    <li>• Your certificate data will be encrypted with FHE (Fully Homomorphic Encryption)</li>
+                    <li>• Sensitive information (scores, grades) will be encrypted on-chain</li>
                     <li>• A blockchain record will be created for verification</li>
                     <li>• You'll receive a unique certificate ID for sharing</li>
-                    <li>• Only you control access permissions</li>
+                    <li>• Only you control access permissions and decryption</li>
                   </ul>
                 </div>
 
@@ -231,9 +350,17 @@ const AddCertificate = () => {
                   </Button>
                   <Button 
                     onClick={handleSubmit}
+                    disabled={isLoading}
                     className="flex-1 bg-gradient-secure hover:shadow-secure text-white"
                   >
-                    Complete Verification
+                    {isLoading ? (
+                      <>
+                        <Lock className="w-4 h-4 mr-2 animate-spin" />
+                        Encrypting & Storing...
+                      </>
+                    ) : (
+                      'Complete Verification'
+                    )}
                   </Button>
                 </div>
               </div>
