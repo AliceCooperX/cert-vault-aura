@@ -129,10 +129,10 @@ const VerifyCertificate = () => {
                       {isVerifying ? 'Verifying...' : 'Verify'}
                     </Button>
                   </div>
+                  </div>
                 </div>
               </div>
-            </div>
-          </Card>
+            </Card>
 
           {verificationResult && (
             <Card className="academic-card p-8">
@@ -216,8 +216,8 @@ const VerifyCertificate = () => {
                   </div>
                 )}
               </div>
-            </div>
-          </Card>
+            </Card>
+          )}
 
           <div className="flex justify-center space-x-4 mt-8">
             <Link to="/vault">

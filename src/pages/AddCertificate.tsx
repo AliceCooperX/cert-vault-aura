@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -29,8 +29,27 @@ const AddCertificate = () => {
     grade: ''
   });
   const { toast } = useToast();
-  const { issueCertificate, isLoading, error } = useCertVaultAura();
+  const { issueCertificate, isLoading, error, registerIssuer, isIssuerAuthorized, address: walletAddress } = useCertVaultAura();
   const { address, isConnected } = useAccount();
+  const [isAuthorized, setIsAuthorized] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    (async () => {
+      if (!isConnected || !address) {
+        setIsAuthorized(null);
+        return;
+      }
+      try {
+        console.log('[AddCertificate] check isIssuerAuthorized');
+        const ok = await isIssuerAuthorized(address);
+        setIsAuthorized(ok);
+        console.log('[AddCertificate] isIssuerAuthorized', ok);
+      } catch (e) {
+        console.warn('[AddCertificate] isIssuerAuthorized failed', e);
+        setIsAuthorized(false);
+      }
+    })();
+  }, [isConnected, address, isIssuerAuthorized]);
 
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -66,14 +85,18 @@ const AddCertificate = () => {
     }
 
     try {
+      console.log('[AddCertificate] handleSubmit:start', { formData, ipfsFile, address });
       const issueDate = new Date(formData.date).getTime() / 1000;
       const expiryDate = issueDate + (365 * 24 * 60 * 60); // 1 year from issue date
       const score = parseInt(formData.score) || 0;
       const grade = parseInt(formData.grade) || 0;
+      console.log('[AddCertificate] prepared fields', { issueDate, expiryDate, score, grade });
       
       // Use IPFS hash if available, otherwise use timestamp hash
       const metadataHash = ipfsFile ? ipfsFile.hash : `hash_${Date.now()}`;
+      console.log('[AddCertificate] metadataHash', metadataHash);
       
+      console.time('[AddCertificate] issueCertificate');
       await issueCertificate(
         address,
         formData.type,
@@ -83,6 +106,8 @@ const AddCertificate = () => {
         score,
         grade
       );
+      console.timeEnd('[AddCertificate] issueCertificate');
+      console.log('[AddCertificate] handleSubmit:success');
       
       toast({
         title: "Certificate added successfully",
@@ -90,6 +115,7 @@ const AddCertificate = () => {
       });
       setStep(4);
     } catch (err) {
+      console.error('[AddCertificate] handleSubmit:error', err);
       toast({
         title: "Failed to add certificate",
         description: error || "An error occurred while adding your certificate.",
@@ -348,20 +374,54 @@ const AddCertificate = () => {
                   <Button variant="outline" onClick={() => setStep(2)} className="flex-1">
                     Back
                   </Button>
-                  <Button 
-                    onClick={handleSubmit}
-                    disabled={isLoading}
-                    className="flex-1 bg-gradient-secure hover:shadow-secure text-white"
-                  >
-                    {isLoading ? (
-                      <>
-                        <Lock className="w-4 h-4 mr-2 animate-spin" />
-                        Encrypting & Storing...
-                      </>
-                    ) : (
-                      'Complete Verification'
-                    )}
-                  </Button>
+                  {isAuthorized === false && (
+                    <Button 
+                      onClick={async () => {
+                        try {
+                          console.log('[AddCertificate] registerIssuer:start');
+                          await registerIssuer('Certified Issuer', 'Auto-registered');
+                          const ok = await isIssuerAuthorized(address!);
+                          setIsAuthorized(ok);
+                          console.log('[AddCertificate] registerIssuer:done', ok);
+                          if (ok) {
+                            toast({ title: 'Issuer registered', description: 'You can now complete verification.' });
+                          } else {
+                            toast({ title: 'Register pending', description: 'Please wait for confirmation and try again.' });
+                          }
+                        } catch (e) {
+                          console.error('[AddCertificate] registerIssuer:error', e);
+                          toast({ title: 'Register failed', description: 'Please retry.', variant: 'destructive' });
+                        }
+                      }}
+                      disabled={isLoading}
+                      className="flex-1 bg-gradient-secure hover:shadow-secure text-white"
+                    >
+                      {isLoading ? (
+                        <>
+                          <Lock className="w-4 h-4 mr-2 animate-spin" />
+                          Registering...
+                        </>
+                      ) : (
+                        'Register Issuer'
+                      )}
+                    </Button>
+                  )}
+                  {isAuthorized !== false && (
+                    <Button 
+                      onClick={handleSubmit}
+                      disabled={isLoading}
+                      className="flex-1 bg-gradient-secure hover:shadow-secure text-white"
+                    >
+                      {isLoading ? (
+                        <>
+                          <Lock className="w-4 h-4 mr-2 animate-spin" />
+                          Encrypting & Storing...
+                        </>
+                      ) : (
+                        'Complete Verification'
+                      )}
+                    </Button>
+                  )}
                 </div>
               </div>
             )}

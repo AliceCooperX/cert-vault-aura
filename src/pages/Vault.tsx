@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -12,67 +12,58 @@ import { useCertVaultAura } from "@/hooks/useCertVaultAura";
 import { useAccount } from "wagmi";
 import scrollBackground from "@/assets/scroll-background.png";
 
-const certificates = [
-  {
-    id: "CERT-2024-001",
-    title: "Bachelor of Computer Science",
-    institution: "Stanford University",
-    date: "May 2023",
-    type: "Academic Degree",
-    verified: true,
-    encrypted: true,
-    views: 3,
-    description: "4-year undergraduate program focusing on software engineering, algorithms, and data structures."
-  },
-  {
-    id: "CERT-2024-002",
-    title: "AWS Cloud Architect Certification",
-    institution: "Amazon Web Services",
-    date: "March 2023",
-    type: "Professional Certification",
-    verified: true,
-    encrypted: true,
-    views: 7,
-    description: "Professional certification for designing distributed applications on AWS platform."
-  },
-  {
-    id: "CERT-2024-003",
-    title: "Master of Business Administration",
-    institution: "Harvard Business School",
-    date: "June 2022",
-    type: "Academic Degree",
-    verified: true,
-    encrypted: true,
-    views: 2,
-    description: "Graduate business degree with focus on strategic management and leadership."
-  },
-  {
-    id: "CERT-2024-004",
-    title: "Google Analytics Certified",
-    institution: "Google",
-    date: "January 2023",
-    type: "Professional Certification",
-    verified: true,
-    encrypted: true,
-    views: 5,
-    description: "Professional certification for digital analytics and marketing measurement."
-  }
-];
-
 const Vault = () => {
   const [searchTerm, setSearchTerm] = useState("");
-  const [selectedCert, setSelectedCert] = useState<typeof certificates[0] | null>(null);
+  const [selectedCert, setSelectedCert] = useState<any | null>(null);
   const [decryptedData, setDecryptedData] = useState<{[key: string]: any}>({});
   const [isDecrypting, setIsDecrypting] = useState(false);
-  const { decryptCertificateData, instance } = useCertVaultAura();
+  const [items, setItems] = useState<any[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const { decryptCertificateData, instance, listCertificatesForHolder, getCertificateEncryptedData } = useCertVaultAura() as any;
   const { address, isConnected } = useAccount();
 
-  const filteredCertificates = certificates.filter(cert =>
-    cert.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    cert.institution.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  useEffect(() => {
+    const load = async () => {
+      if (!isConnected || !address) {
+        setItems([]);
+        return;
+      }
+      setLoading(true);
+      setLoadError(null);
+      try {
+        const list = await listCertificatesForHolder(address);
+        // map to UI schema
+        const mapped = list.map((it: any) => ({
+          id: `CERT-${String(it.certId).padStart(4, '0')}`,
+          certId: it.certId,
+          title: it.certType || 'Unknown',
+          institution: (it.issuer || '').slice(0, 10) + '…',
+          date: '',
+          type: it.certType || 'Unknown',
+          verified: Boolean(it.isVerified),
+          encrypted: true,
+          views: 0,
+          description: `IPFS: ${it.metadataHash || 'N/A'}`,
+        }));
+        setItems(mapped);
+      } catch (e: any) {
+        setLoadError(e?.message || 'Failed to load certificates');
+      } finally {
+        setLoading(false);
+      }
+    };
+    load();
+  }, [isConnected, address, listCertificatesForHolder]);
 
-  const handleDecrypt = async (certId: string) => {
+  const filteredCertificates = useMemo(() => {
+    return items.filter(cert =>
+      (cert.title || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (cert.institution || '').toLowerCase().includes(searchTerm.toLowerCase())
+    );
+  }, [items, searchTerm]);
+
+  const handleDecrypt = async (certIdUi: string, certId?: number) => {
     if (!isConnected || !address || !instance) {
       alert('Please connect your wallet and ensure FHE service is ready');
       return;
@@ -80,10 +71,9 @@ const Vault = () => {
 
     setIsDecrypting(true);
     try {
-      // This would be the actual certificate ID from the contract
-      const certIdNum = parseInt(certId.split('-')[2]);
-      const decrypted = await decryptCertificateData(certIdNum);
-      setDecryptedData(prev => ({...prev, [certId]: decrypted}));
+      const cid = typeof certId === 'number' ? certId : parseInt((certIdUi.split('-')[1] || '0'));
+      const decrypted = await decryptCertificateData(cid);
+      setDecryptedData(prev => ({...prev, [certIdUi]: decrypted}));
     } catch (error) {
       console.error('Decryption failed:', error);
       alert('Failed to decrypt certificate data');
@@ -95,7 +85,6 @@ const Vault = () => {
   return (
     <div className="min-h-screen bg-background font-inter">
       <Header />
-      
       <main className="py-20 bg-gradient-to-br from-parchment to-background">
         <div className="container mx-auto px-6">
           <div className="mb-8">
@@ -106,12 +95,8 @@ const Vault = () => {
           </div>
 
           <div className="text-center mb-12">
-            <h1 className="font-playfair text-4xl md:text-5xl font-bold mb-6 academic-heading">
-              My Certificate Vault
-            </h1>
-            <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-              Secure access to your encrypted academic achievements and professional certifications.
-            </p>
+            <h1 className="font-playfair text-4xl md:text-5xl font-bold mb-6 academic-heading">My Certificate Vault</h1>
+            <p className="text-xl text-muted-foreground max-w-2xl mx-auto">Secure access to your encrypted academic achievements and professional certifications.</p>
           </div>
 
           <div className="mb-8 flex flex-col md:flex-row gap-4">
@@ -133,6 +118,10 @@ const Vault = () => {
             </Button>
           </div>
 
+          {loadError && (
+            <Card className="academic-card p-6 mb-6 text-red-500">{loadError}</Card>
+          )}
+
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 mb-12">
             {filteredCertificates.map((cert, index) => (
               <Card 
@@ -140,16 +129,13 @@ const Vault = () => {
                 className="academic-card hover:shadow-gold transition-all duration-300 overflow-hidden group relative"
                 style={{ animationDelay: `${index * 0.1}s` }}
               >
-                <div 
-                  className="absolute inset-0 opacity-5 bg-cover bg-center"
-                  style={{ backgroundImage: `url(${scrollBackground})` }}
-                ></div>
+                <div className="absolute inset-0 opacity-5 bg-cover bg-center" style={{ backgroundImage: `url(${scrollBackground})` }}></div>
                 
                 <div className="p-6 relative z-10">
                   <div className="flex items-start justify-between mb-4">
                     <div className="flex items-center space-x-2">
                       <FileText className="w-5 h-5 text-academic-navy" />
-                      <span className="text-sm text-muted-foreground">{cert.date}</span>
+                      <span className="text-sm text-muted-foreground">{cert.date || '-'}</span>
                     </div>
                     <div className="flex space-x-1">
                       {cert.verified && (
@@ -163,33 +149,17 @@ const Vault = () => {
                           <Shield className="w-3 h-3 text-white" />
                         </div>
                       )}
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => handleDecrypt(cert.id)}
-                        disabled={isDecrypting}
-                        className="ml-2"
-                      >
-                        {isDecrypting ? (
-                          <Lock className="w-3 h-3 animate-spin" />
-                        ) : decryptedData[cert.id] ? (
-                          <Unlock className="w-3 h-3" />
-                        ) : (
-                          <Lock className="w-3 h-3" />
-                        )}
+                      <Button size="sm" variant="outline" onClick={() => handleDecrypt(cert.id, cert.certId)} disabled={isDecrypting} className="ml-2">
+                        {isDecrypting ? (<Lock className="w-3 h-3 animate-spin" />) : decryptedData[cert.id] ? (<Unlock className="w-3 h-3" />) : (<Lock className="w-3 h-3" />)}
                       </Button>
                     </div>
                   </div>
 
-                  <h3 className="font-playfair text-xl font-semibold mb-2 text-academic-navy group-hover:text-secure-emerald transition-colors">
-                    {cert.title}
-                  </h3>
-                  
+                  <h3 className="font-playfair text-xl font-semibold mb-2 text-academic-navy group-hover:text-secure-emerald transition-colors">{cert.title}</h3>
                   <div className="flex items-center mb-2 text-muted-foreground">
                     <Building className="w-4 h-4 mr-2" />
                     <span className="text-sm">{cert.institution}</span>
                   </div>
-                  
                   <Badge variant="outline" className="mb-4">{cert.type}</Badge>
 
                   <div className="flex items-center justify-between">
@@ -197,15 +167,9 @@ const Vault = () => {
                       <Eye className="w-4 h-4" />
                       <span>{cert.views} verified views</span>
                     </div>
-                    
                     <Dialog>
                       <DialogTrigger asChild>
-                        <Button 
-                          size="sm" 
-                          variant="outline" 
-                          className="hover:bg-secure-emerald hover:text-white transition-all"
-                          onClick={() => setSelectedCert(cert)}
-                        >
+                        <Button size="sm" variant="outline" className="hover:bg-secure-emerald hover:text-white transition-all" onClick={() => setSelectedCert(cert)}>
                           View Details
                         </Button>
                       </DialogTrigger>
@@ -218,20 +182,20 @@ const Vault = () => {
                             <div className="flex items-center justify-between">
                               <Badge className="secure-badge">ID: {selectedCert.id}</Badge>
                               <div className="flex space-x-2">
-                                <Badge className="secure-badge">
-                                  <CheckCircle className="w-3 h-3 mr-1" />
-                                  Verified
-                                </Badge>
+                                {selectedCert.verified && (
+                                  <Badge className="secure-badge">
+                                    <CheckCircle className="w-3 h-3 mr-1" />
+                                    Verified
+                                  </Badge>
+                                )}
                                 <Badge variant="outline">Encrypted</Badge>
                               </div>
                             </div>
-                            
                             <div className="space-y-4">
                               <div>
                                 <h4 className="font-semibold mb-1">Certificate Title</h4>
                                 <p className="text-muted-foreground">{selectedCert.title}</p>
                               </div>
-                              
                               <div className="grid md:grid-cols-2 gap-4">
                                 <div>
                                   <h4 className="font-semibold mb-1">Institution</h4>
@@ -239,25 +203,17 @@ const Vault = () => {
                                 </div>
                                 <div>
                                   <h4 className="font-semibold mb-1">Completion Date</h4>
-                                  <p className="text-muted-foreground">{selectedCert.date}</p>
+                                  <p className="text-muted-foreground">{selectedCert.date || '-'}</p>
                                 </div>
                               </div>
-                              
                               <div>
                                 <h4 className="font-semibold mb-1">Type</h4>
                                 <p className="text-muted-foreground">{selectedCert.type}</p>
                               </div>
-                              
                               <div>
                                 <h4 className="font-semibold mb-1">Description</h4>
                                 <p className="text-muted-foreground">{selectedCert.description}</p>
                               </div>
-                              
-                              <div>
-                                <h4 className="font-semibold mb-1">Verification Statistics</h4>
-                                <p className="text-muted-foreground">{selectedCert.views} verified employer views</p>
-                              </div>
-                              
                               {decryptedData[selectedCert.id] && (
                                 <div className="border-t pt-4">
                                   <h4 className="font-semibold mb-2 text-secure-emerald">Decrypted Data (FHE)</h4>
@@ -274,16 +230,9 @@ const Vault = () => {
                                 </div>
                               )}
                             </div>
-                            
                             <div className="flex space-x-4">
-                              <Button className="flex-1 bg-gradient-secure hover:shadow-secure text-white">
-                                <Share2 className="w-4 h-4 mr-2" />
-                                Share with Employer
-                              </Button>
-                              <Button variant="outline" className="flex-1">
-                                <Download className="w-4 h-4 mr-2" />
-                                Download Copy
-                              </Button>
+                              <Button className="flex-1 bg-gradient-secure hover:shadow-secure text-white"><Share2 className="w-4 h-4 mr-2" />Share with Employer</Button>
+                              <Button variant="outline" className="flex-1"><Download className="w-4 h-4 mr-2" />Download Copy</Button>
                             </div>
                           </div>
                         )}
@@ -295,16 +244,12 @@ const Vault = () => {
             ))}
           </div>
 
-          {filteredCertificates.length === 0 && (
+          {!loading && filteredCertificates.length === 0 && (
             <div className="text-center py-12">
               <FileText className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
               <h3 className="font-playfair text-xl font-semibold mb-2">No certificates found</h3>
-              <p className="text-muted-foreground mb-6">
-                {searchTerm ? "Try adjusting your search terms" : "Start by adding your first certificate"}
-              </p>
-              <Button asChild className="bg-gradient-secure hover:shadow-secure text-white">
-                <Link to="/add-certificate">Add Your First Certificate</Link>
-              </Button>
+              <p className="text-muted-foreground mb-6">{searchTerm ? "Try adjusting your search terms" : "Start by adding your first certificate"}</p>
+              <Button asChild className="bg-gradient-secure hover:shadow-secure text-white"><Link to="/add-certificate">Add Your First Certificate</Link></Button>
             </div>
           )}
 
@@ -316,7 +261,7 @@ const Vault = () => {
                 <div className="text-muted-foreground">AES Encryption</div>
               </div>
               <div>
-                <div className="text-2xl font-bold text-secure-emerald mb-2">{certificates.length}</div>
+                <div className="text-2xl font-bold text-secure-emerald mb-2">{items.length}</div>
                 <div className="text-muted-foreground">Certificates Secured</div>
               </div>
               <div>
@@ -327,7 +272,6 @@ const Vault = () => {
           </Card>
         </div>
       </main>
-
       <Footer />
     </div>
   );

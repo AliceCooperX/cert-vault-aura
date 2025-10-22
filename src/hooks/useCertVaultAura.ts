@@ -1,29 +1,51 @@
-import { useWriteContract, useReadContract, useAccount } from 'wagmi';
-import { contractConfig } from '../lib/wallet';
+import { useWriteContract, useAccount, usePublicClient } from 'wagmi';
+import { contractConfig, rpcConfig } from '../lib/wallet';
 import { useState } from 'react';
 import { useZamaInstance } from './useZamaInstance';
 import { useEthersSigner } from './useEthersSigner';
+import { createPublicClient, http } from 'viem';
+import { sepolia as viemSepolia } from 'viem/chains';
 
 export function useCertVaultAura() {
   const { address } = useAccount();
   const { writeContractAsync } = useWriteContract();
+  const publicClient = usePublicClient();
+  const fallbackClient = createPublicClient({ chain: viemSepolia, transport: http(rpcConfig.rpcUrl) });
+  const getClient = () => publicClient ?? fallbackClient;
   const { instance } = useZamaInstance();
   const signerPromise = useEthersSigner();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const isIssuerAuthorized = async (issuer: string) => {
+    try {
+      const info = await getClient().readContract({
+        address: contractConfig.address as `0x${string}`,
+        abi: contractConfig.abi,
+        functionName: 'getIssuerInfo',
+        args: [issuer],
+      });
+      // getIssuerInfo returns (name, description, isAuthorized)
+      return Array.isArray(info) ? Boolean(info[2]) : false;
+    } catch (e) {
+      console.warn('[useCertVaultAura] isIssuerAuthorized read failed, default false', e);
+      return false;
+    }
+  };
 
   // Register Issuer
   const registerIssuer = async (name: string, description: string) => {
     try {
       setIsLoading(true);
       setError(null);
-      
-      await writeContract({
-        address: contractConfig.address,
+      const hash = await writeContractAsync({
+        address: contractConfig.address as `0x${string}`,
         abi: contractConfig.abi,
         functionName: 'registerIssuer',
         args: [name, description],
       });
+      // wait for tx confirmation
+      await getClient().waitForTransactionReceipt({ hash });
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to register issuer');
       throw err;
@@ -50,14 +72,27 @@ export function useCertVaultAura() {
       setIsLoading(true);
       setError(null);
       
+      console.log('[useCertVaultAura] issueCertificate:start', { holder, certType, metadataHash, issueDate, expiryDate, score, grade });
+      console.time('[useCertVaultAura] issueCertificate.total');
       // Create encrypted input
+      console.time('[useCertVaultAura] createEncryptedInput');
       const input = instance.createEncryptedInput(contractConfig.address, address);
+      console.timeEnd('[useCertVaultAura] createEncryptedInput');
+      console.log('[useCertVaultAura] add32:start');
       input.add32(BigInt(issueDate));
       input.add32(BigInt(expiryDate));
       input.add32(BigInt(score));
       input.add32(BigInt(grade));
+      console.log('[useCertVaultAura] add32:done');
       
+      console.time('[useCertVaultAura] input.encrypt');
       const encryptedInput = await input.encrypt();
+      console.timeEnd('[useCertVaultAura] input.encrypt');
+      console.log('[useCertVaultAura] encryptedInput', {
+        handlesLen: encryptedInput.handles?.length,
+        proofLen: encryptedInput.inputProof?.length,
+        handlesPreview: Array.isArray(encryptedInput.handles) ? encryptedInput.handles.slice(0, 2) : null
+      });
       
       // Convert handles to proper format
       const convertHex = (handle: any): string => {
@@ -74,17 +109,23 @@ export function useCertVaultAura() {
       const handles = encryptedInput.handles.map(convertHex);
       const proof = `0x${Array.from(encryptedInput.inputProof)
         .map(b => b.toString(16).padStart(2, '0')).join('')}`;
+      console.log('[useCertVaultAura] formatted', { handlesCount: handles.length, handles: handles.slice(0, 4), proofLen: proof.length });
       
-      await writeContractAsync({
+      console.time('[useCertVaultAura] write.issueCertificate');
+      const tx = await writeContractAsync({
         address: contractConfig.address as `0x${string}`,
         abi: contractConfig.abi,
         functionName: 'issueCertificate',
         args: [holder, certType, metadataHash, handles[0], handles[1], handles[2], handles[3], proof],
       });
+      console.timeEnd('[useCertVaultAura] write.issueCertificate');
+      console.log('[useCertVaultAura] tx sent', tx);
     } catch (err) {
+      console.error('[useCertVaultAura] issueCertificate:error', err);
       setError(err instanceof Error ? err.message : 'Failed to issue certificate');
       throw err;
     } finally {
+      console.timeEnd('[useCertVaultAura] issueCertificate.total');
       setIsLoading(false);
     }
   };
@@ -95,8 +136,8 @@ export function useCertVaultAura() {
       setIsLoading(true);
       setError(null);
       
-      await writeContract({
-        address: contractConfig.address,
+      await writeContractAsync({
+        address: contractConfig.address as `0x${string}`,
         abi: contractConfig.abi,
         functionName: 'requestVerification',
         args: [certId, verificationHash],
@@ -115,8 +156,8 @@ export function useCertVaultAura() {
       setIsLoading(true);
       setError(null);
       
-      await writeContract({
-        address: contractConfig.address,
+      await writeContractAsync({
+        address: contractConfig.address as `0x${string}`,
         abi: contractConfig.abi,
         functionName: 'revokeCertificate',
         args: [certId],
@@ -140,8 +181,8 @@ export function useCertVaultAura() {
       setIsLoading(true);
       setError(null);
       
-      await writeContract({
-        address: contractConfig.address,
+      await writeContractAsync({
+        address: contractConfig.address as `0x${string}`,
         abi: contractConfig.abi,
         functionName: 'encryptCertificateData',
         args: [certId, encryptedScore, encryptedGrade, dataHash],
@@ -164,8 +205,8 @@ export function useCertVaultAura() {
       setIsLoading(true);
       setError(null);
       
-      await writeContract({
-        address: contractConfig.address,
+      await writeContractAsync({
+        address: contractConfig.address as `0x${string}`,
         abi: contractConfig.abi,
         functionName: 'updateCertificateWithEncryptedData',
         args: [certId, newStatus, encryptedUpdateData],
@@ -188,23 +229,8 @@ export function useCertVaultAura() {
       setIsLoading(true);
       setError(null);
       
-      // Get encrypted data from contract
-      const encryptedData = await contractConfig.abi.find(
-        (item: any) => item.name === 'getCertificateEncryptedData'
-      );
-      
-      if (!encryptedData) {
-        throw new Error('Contract ABI not found');
-      }
-      
-      // This would need to be implemented with actual contract call
-      // For now, return mock data structure
-      return {
-        score: 0,
-        grade: 0,
-        issueDate: 0,
-        expiryDate: 0
-      };
+      // Placeholder
+      return { score: 0, grade: 0, issueDate: 0, expiryDate: 0 };
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to decrypt certificate data');
       throw err;
@@ -219,15 +245,19 @@ export function useCertVaultAura() {
       setIsLoading(true);
       setError(null);
       
-      const result = await readContract({
-        address: contractConfig.address,
+      if (!publicClient) throw new Error('No public client');
+      console.log('[useCertVaultAura] verifyCertificate:start', { certificateId });
+      const result = await publicClient.readContract({
+        address: contractConfig.address as `0x${string}`,
         abi: contractConfig.abi,
         functionName: 'verifyCertificate',
         args: [certificateId],
       });
+      console.log('[useCertVaultAura] verifyCertificate:result', result);
       
       return result as boolean;
     } catch (err) {
+      console.error('[useCertVaultAura] verifyCertificate:error', err);
       setError(err instanceof Error ? err.message : 'Failed to verify certificate');
       throw err;
     } finally {
@@ -241,20 +271,66 @@ export function useCertVaultAura() {
       setIsLoading(true);
       setError(null);
       
-      const result = await readContract({
-        address: contractConfig.address,
+      if (!publicClient) throw new Error('No public client');
+      console.log('[useCertVaultAura] getCertificateDetails:start', { certificateId });
+      const result = await publicClient.readContract({
+        address: contractConfig.address as `0x${string}`,
         abi: contractConfig.abi,
-        functionName: 'getCertificate',
+        functionName: 'getCertificateInfo',
         args: [certificateId],
       });
+      console.log('[useCertVaultAura] getCertificateDetails:result', result);
       
       return result as any;
     } catch (err) {
+      console.error('[useCertVaultAura] getCertificateDetails:error', err);
       setError(err instanceof Error ? err.message : 'Failed to get certificate details');
       throw err;
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const getCertCounter = async (): Promise<number> => {
+    const client = publicClient;
+    if (!client) throw new Error('No public client');
+    const count = await client.readContract({
+      address: contractConfig.address as `0x${string}`,
+      abi: contractConfig.abi,
+      functionName: 'certCounter',
+      args: [],
+    });
+    return Number(count as bigint | number);
+  };
+
+  const getCertificateInfoById = async (certId: number) => {
+    const client = publicClient;
+    if (!client) throw new Error('No public client');
+    const info = await client.readContract({
+      address: contractConfig.address as `0x${string}`,
+      abi: contractConfig.abi,
+      functionName: 'getCertificateInfo',
+      args: [certId],
+    });
+    // (certType, metadataHash, isVerified, issuer, holder)
+    const [certType, metadataHash, isVerified, issuer, holder] = info as any[];
+    return { certId, certType, metadataHash, isVerified, issuer, holder };
+  };
+
+  const listCertificatesForHolder = async (holderAddr: string) => {
+    const total = await getCertCounter();
+    const results: any[] = [];
+    for (let i = 0; i < total; i++) {
+      try {
+        const info = await getCertificateInfoById(i);
+        if (info.holder?.toLowerCase() === holderAddr.toLowerCase()) {
+          results.push(info);
+        }
+      } catch (e) {
+        console.warn('[useCertVaultAura] getCertificateInfoById failed', i, e);
+      }
+    }
+    return results;
   };
 
   return {
@@ -267,6 +343,10 @@ export function useCertVaultAura() {
     decryptCertificateData,
     verifyCertificate,
     getCertificateDetails,
+    getCertCounter,
+    getCertificateInfoById,
+    listCertificatesForHolder,
+    isIssuerAuthorized,
     isLoading,
     error,
     address,
