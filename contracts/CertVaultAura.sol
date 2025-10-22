@@ -162,7 +162,7 @@ contract CertVaultAura is SepoliaConfig {
         verificationRequests[requestId] = VerificationRequest({
             requestId: requestId,
             certId: _certId,
-            verifierId: 0,
+            verifierId: requestId, // Use requestId as verifierId for uniqueness
             verificationStatus: 0, // Pending
             isProcessed: false,
             verificationHash: _verificationHash,
