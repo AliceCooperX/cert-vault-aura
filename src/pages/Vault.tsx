@@ -20,7 +20,7 @@ const Vault = () => {
   const [items, setItems] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
-  const { decryptCertificateData, instance, listCertificatesForHolder, getCertificateEncryptedData } = useCertVaultAura() as any;
+  const { decryptCertificateData, instance, listCertificatesForHolder } = useCertVaultAura() as any;
   const { address, isConnected } = useAccount();
 
   useEffect(() => {
@@ -37,14 +37,15 @@ const Vault = () => {
         const mapped = list.map((it: any) => ({
           id: `CERT-${String(it.certId).padStart(4, '0')}`,
           certId: it.certId,
-          title: it.certType || 'Unknown',
-          institution: (it.issuer || '').slice(0, 10) + '…',
-          date: '',
+          title: it.title || it.certType || 'Unknown',
+          institution: it.institution || (it.issuer || '').slice(0, 10) + '…',
+          date: it.issueDate ? new Date(Number(it.issueDate) * 1000).toLocaleDateString() : '',
           type: it.certType || 'Unknown',
           verified: Boolean(it.isVerified),
           encrypted: true,
           views: 0,
-          description: `IPFS: ${it.metadataHash || 'N/A'}`,
+          description: it.description || `IPFS: ${it.metadataHash || 'N/A'}`,
+          ipfsHash: it.metadataHash,
         }));
         setItems(mapped);
       } catch (e: any) {
@@ -173,12 +174,13 @@ const Vault = () => {
                           View Details
                         </Button>
                       </DialogTrigger>
-                      <DialogContent className="max-w-2xl">
+                      <DialogContent className="max-w-2xl" aria-describedby="vault-dialog-desc">
                         <DialogHeader>
                           <DialogTitle className="font-playfair text-2xl">Certificate Details</DialogTitle>
                         </DialogHeader>
                         {selectedCert && (
                           <div className="space-y-6">
+                            <p id="vault-dialog-desc" className="sr-only">Certificate details and FHE decryption actions.</p>
                             <div className="flex items-center justify-between">
                               <Badge className="secure-badge">ID: {selectedCert.id}</Badge>
                               <div className="flex space-x-2">
@@ -211,8 +213,20 @@ const Vault = () => {
                                 <p className="text-muted-foreground">{selectedCert.type}</p>
                               </div>
                               <div>
-                                <h4 className="font-semibold mb-1">Description</h4>
+                                <h4 className="font-semibold mb-1">Document</h4>
                                 <p className="text-muted-foreground">{selectedCert.description}</p>
+                                {selectedCert.ipfsHash && (
+                                  <div className="mt-2">
+                                    <a
+                                      href={`https://gateway.pinata.cloud/ipfs/${selectedCert.ipfsHash}`}
+                                      target="_blank"
+                                      rel="noreferrer noopener"
+                                      className="text-blue-500 hover:underline"
+                                    >
+                                      Open document in new tab
+                                    </a>
+                                  </div>
+                                )}
                               </div>
                               {decryptedData[selectedCert.id] && (
                                 <div className="border-t pt-4">
@@ -227,6 +241,13 @@ const Vault = () => {
                                       <p className="font-medium">{decryptedData[selectedCert.id].grade || 'N/A'}</p>
                                     </div>
                                   </div>
+                                </div>
+                              )}
+                              {!decryptedData[selectedCert.id] && (
+                                <div className="border-t pt-4">
+                                  <Button onClick={() => handleDecrypt(selectedCert.id, selectedCert.certId)} disabled={isDecrypting} className="bg-gradient-secure hover:shadow-secure text-white">
+                                    {isDecrypting ? (<><Lock className="w-4 h-4 mr-2 animate-spin" />Decrypting...</>) : (<>Decrypt Sensitive Data</>)}
+                                  </Button>
                                 </div>
                               )}
                             </div>

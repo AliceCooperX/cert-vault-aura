@@ -18,6 +18,9 @@ contract CertVaultAura is SepoliaConfig {
         euint32 encryptedGrade; // FHE encrypted grade
         bool isVerified;
         string certType;
+        string title; // Certificate title
+        string institution; // Institution name
+        string description; // Optional description
         string metadataHash;
         address issuer;
         address holder;
@@ -95,6 +98,9 @@ contract CertVaultAura is SepoliaConfig {
     function issueCertificate(
         address _holder,
         string memory _certType,
+        string memory _title,
+        string memory _institution,
+        string memory _description,
         string memory _metadataHash,
         externalEuint32 _issueDate,
         externalEuint32 _expiryDate,
@@ -123,6 +129,9 @@ contract CertVaultAura is SepoliaConfig {
             encryptedGrade: encryptedGrade,
             isVerified: false,
             certType: _certType,
+            title: _title,
+            institution: _institution,
+            description: _description,
             metadataHash: _metadataHash,
             issuer: msg.sender,
             holder: _holder

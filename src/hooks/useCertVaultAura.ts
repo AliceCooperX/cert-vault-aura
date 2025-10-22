@@ -58,6 +58,9 @@ export function useCertVaultAura() {
   const issueCertificate = async (
     holder: string,
     certType: string,
+    title: string,
+    institution: string,
+    description: string,
     metadataHash: string,
     issueDate: number,
     expiryDate: number,
@@ -116,7 +119,7 @@ export function useCertVaultAura() {
         address: contractConfig.address as `0x${string}`,
         abi: contractConfig.abi,
         functionName: 'issueCertificate',
-        args: [holder, certType, metadataHash, handles[0], handles[1], handles[2], handles[3], proof],
+        args: [holder, certType, title, institution, description, metadataHash, handles[0], handles[1], handles[2], handles[3], proof],
       });
       console.timeEnd('[useCertVaultAura] write.issueCertificate');
       console.log('[useCertVaultAura] tx sent', tx);
@@ -228,9 +231,76 @@ export function useCertVaultAura() {
     try {
       setIsLoading(true);
       setError(null);
+      if (!publicClient) throw new Error('No public client');
+      const data = await publicClient.readContract({
+        address: contractConfig.address as `0x${string}`,
+        abi: contractConfig.abi,
+        functionName: 'getCertificateEncryptedData',
+        args: [BigInt(certId)],
+      });
+      const [encryptedScore, encryptedGrade, issueDate, expiryDate] = data as any[];
+      console.log('[useCertVaultAura] decryptCertificateData:encrypted', { encryptedScore, encryptedGrade, issueDate, expiryDate });
+
+      // Create keypair for decryption
+      const keypair = instance.generateKeypair();
       
-      // Placeholder
-      return { score: 0, grade: 0, issueDate: 0, expiryDate: 0 };
+      // Prepare handle-contract pairs
+      const handleContractPairs = [
+        { 
+          handle: encryptedScore, 
+          contractAddress: contractConfig.address 
+        },
+        { 
+          handle: encryptedGrade, 
+          contractAddress: contractConfig.address 
+        }
+      ];
+      
+      console.log('[useCertVaultAura] handle-contract pairs:', handleContractPairs);
+
+      // Create EIP712 signature
+      const startTimeStamp = Math.floor(Date.now() / 1000).toString();
+      const durationDays = '10';
+      const contractAddresses = [contractConfig.address];
+
+      const eip712 = instance.createEIP712(
+        keypair.publicKey,
+        contractAddresses,
+        startTimeStamp,
+        durationDays
+      );
+
+      const signer = await signerPromise;
+      const signature = await signer.signTypedData(
+        eip712.domain,
+        { UserDecryptRequestVerification: eip712.types.UserDecryptRequestVerification },
+        eip712.message
+      );
+
+      // Decrypt the data
+      const result = await instance.userDecrypt(
+        handleContractPairs,
+        keypair.privateKey,
+        keypair.publicKey,
+        signature.replace('0x', ''),
+        contractAddresses,
+        address,
+        startTimeStamp,
+        durationDays
+      );
+
+      console.log('[useCertVaultAura] decryption result:', result);
+      console.log('[useCertVaultAura] score handle:', encryptedScore);
+      console.log('[useCertVaultAura] grade handle:', encryptedGrade);
+      console.log('[useCertVaultAura] decrypted score:', result[encryptedScore]);
+      console.log('[useCertVaultAura] decrypted grade:', result[encryptedGrade]);
+
+      return {
+        score: result[encryptedScore]?.toString() || '0',
+        grade: result[encryptedGrade]?.toString() || '0',
+        issueDate: Number(issueDate),
+        expiryDate: Number(expiryDate),
+      };
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to decrypt certificate data');
       throw err;
@@ -246,16 +316,30 @@ export function useCertVaultAura() {
       setError(null);
       
       if (!publicClient) throw new Error('No public client');
-      console.log('[useCertVaultAura] verifyCertificate:start', { certificateId });
-      const result = await publicClient.readContract({
+      // parse certificate id: support 'CERT-0001', numeric, or hex 0x..
+      const parseId = (id: string): bigint => {
+        const m = id.match(/(\d+)/g);
+        if (m && m.length) {
+          return BigInt(m[m.length - 1]);
+        }
+        if (id.startsWith('0x')) {
+          return BigInt(id);
+        }
+        return BigInt(Number(id || '0'));
+      };
+      const certId = parseId(certificateId);
+      console.log('[useCertVaultAura] verifyCertificate:start', { certificateId, certId: certId.toString() });
+      const info = await publicClient.readContract({
         address: contractConfig.address as `0x${string}`,
         abi: contractConfig.abi,
-        functionName: 'verifyCertificate',
-        args: [certificateId],
+        functionName: 'getCertificateInfo',
+        args: [certId],
       });
-      console.log('[useCertVaultAura] verifyCertificate:result', result);
-      
-      return result as boolean;
+      const [certType, metadataHash, isVerified, issuer, holder] = info as any[];
+      const exists = issuer && issuer !== '0x0000000000000000000000000000000000000000';
+      const result = Boolean(exists);
+      console.log('[useCertVaultAura] verifyCertificate:info', { certType, metadataHash, isVerified, issuer, holder, result });
+      return result;
     } catch (err) {
       console.error('[useCertVaultAura] verifyCertificate:error', err);
       setError(err instanceof Error ? err.message : 'Failed to verify certificate');
@@ -272,16 +356,28 @@ export function useCertVaultAura() {
       setError(null);
       
       if (!publicClient) throw new Error('No public client');
-      console.log('[useCertVaultAura] getCertificateDetails:start', { certificateId });
+      const parseId = (id: string): bigint => {
+        const m = id.match(/(\d+)/g);
+        if (m && m.length) {
+          return BigInt(m[m.length - 1]);
+        }
+        if (id.startsWith('0x')) {
+          return BigInt(id);
+        }
+        return BigInt(Number(id || '0'));
+      };
+      const certId = parseId(certificateId);
+      console.log('[useCertVaultAura] getCertificateDetails:start', { certificateId, certId: certId.toString() });
       const result = await publicClient.readContract({
         address: contractConfig.address as `0x${string}`,
         abi: contractConfig.abi,
         functionName: 'getCertificateInfo',
-        args: [certificateId],
+        args: [certId],
       });
       console.log('[useCertVaultAura] getCertificateDetails:result', result);
       
-      return result as any;
+      const [certType, metadataHash, isVerified, issuer, holder] = result as any[];
+      return { certType, metadataHash, isVerified, issuer, holder } as any;
     } catch (err) {
       console.error('[useCertVaultAura] getCertificateDetails:error', err);
       setError(err instanceof Error ? err.message : 'Failed to get certificate details');

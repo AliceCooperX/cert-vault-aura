@@ -10,7 +10,8 @@ const config = {
       optimizer: {
         enabled: true,
         runs: 200
-      }
+      },
+      viaIR: true
     }
   },
   networks: {

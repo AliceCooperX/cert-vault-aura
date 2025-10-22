@@ -22,7 +22,7 @@ const AddCertificate = () => {
   const [formData, setFormData] = useState({
     title: '',
     institution: '',
-    date: '',
+    date: new Date(Date.now() - 10 * 365 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], // 10 years ago
     type: '',
     description: '',
     score: '',
@@ -100,6 +100,9 @@ const AddCertificate = () => {
       await issueCertificate(
         address,
         formData.type,
+        formData.title,
+        formData.institution,
+        formData.description,
         metadataHash, // IPFS hash or fallback hash
         issueDate,
         expiryDate,

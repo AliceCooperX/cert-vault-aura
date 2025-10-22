@@ -16,17 +16,14 @@ export const config = getDefaultConfig({
 
 // Contract Configuration
 export const contractConfig = {
-  address: import.meta.env.VITE_CONTRACT_ADDRESS as `0x${string}`,
+  address: '0x0E67263fFc1DBBd83cAd1396F2744Af9Abd62d36' as `0x${string}`,
   abi: (CertVaultAuraArtifact as any)?.abi ?? [],
 } as const;
 
-if (!contractConfig.address) {
-  // eslint-disable-next-line no-console
-  console.warn('[wallet] VITE_CONTRACT_ADDRESS is not set');
-}
+// Contract address is now hardcoded to the deployed address
 
 // RPC Configuration
 export const rpcConfig = {
   chainId: parseInt(import.meta.env.VITE_CHAIN_ID || '11155111'),
-  rpcUrl: import.meta.env.VITE_RPC_URL || 'https://sepolia.infura.io/v3/YOUR_INFURA_PROJECT_ID',
+  rpcUrl: import.meta.env.VITE_RPC_URL || 'https://1rpc.io/sepolia',
 };
