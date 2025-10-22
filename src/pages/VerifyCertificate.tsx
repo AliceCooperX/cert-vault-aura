@@ -4,17 +4,7 @@ import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
-import { 
-  Search, 
-  Shield, 
-  CheckCircle, 
-  AlertCircle, 
-  Eye, 
-  Download,
-  ExternalLink,
-  Lock,
-  FileText
-} from 'lucide-react';
+import { Search, Shield, CheckCircle, AlertCircle, Eye, ExternalLink, Lock, FileText } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
@@ -52,11 +42,9 @@ const VerifyCertificate = () => {
 
     setIsVerifying(true);
     try {
-      // Verify certificate on blockchain
       const isValid = await verifyCertificate(certificateId);
       
       if (isValid) {
-        // Get certificate details
         const details = await getCertificateDetails(certificateId);
         setVerificationResult({
           valid: true,
@@ -171,7 +159,6 @@ const VerifyCertificate = () => {
             </div>
           </Card>
 
-          {/* Verification Results */}
           {verificationResult && (
             <Card className="academic-card p-8">
               <div className="space-y-6">
@@ -193,7 +180,6 @@ const VerifyCertificate = () => {
 
                 {verificationResult.valid && verificationResult.details ? (
                   <div className="space-y-6">
-                    {/* Certificate Details */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       <div className="space-y-4">
                         <div>
@@ -247,7 +233,6 @@ const VerifyCertificate = () => {
                       </div>
                     </div>
 
-                    {/* IPFS File Link */}
                     {verificationResult.details.metadataHash && (
                       <div className="border-t pt-6">
                         <h4 className="font-semibold mb-4">Certificate Document</h4>
@@ -269,7 +254,6 @@ const VerifyCertificate = () => {
                       </div>
                     )}
 
-                    {/* Security Features */}
                     <div className="border-t pt-6">
                       <h4 className="font-semibold mb-4">Security Features</h4>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -325,7 +309,6 @@ const VerifyCertificate = () => {
             </div>
           </Card>
 
-          {/* Quick Actions */}
           <div className="flex justify-center space-x-4 mt-8">
             <Link to="/vault">
               <Button variant="outline" className="flex items-center space-x-2">
