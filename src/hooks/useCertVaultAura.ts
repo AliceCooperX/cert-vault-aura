@@ -125,7 +125,7 @@ export function useCertVaultAura() {
       console.log('[useCertVaultAura] tx sent', txHash);
       
       // Wait for transaction receipt using waitForTransactionReceipt
-      const { waitForTransactionReceipt } = await import('viem');
+      const { waitForTransactionReceipt } = await import('viem/actions');
       const receipt = await waitForTransactionReceipt(publicClient, {
         hash: txHash as `0x${string}`,
         timeout: 60_000, // 60 seconds timeout
@@ -163,7 +163,7 @@ export function useCertVaultAura() {
       console.log('[useCertVaultAura] requestVerification:tx', txHash);
       
       // Wait for transaction receipt to get the requestId from logs
-      const { waitForTransactionReceipt } = await import('viem');
+      const { waitForTransactionReceipt } = await import('viem/actions');
       const receipt = await waitForTransactionReceipt(publicClient, {
         hash: txHash as `0x${string}`,
         timeout: 60_000, // 60 seconds timeout

@@ -139,7 +139,7 @@ const VerifyCertificate = () => {
       console.log('[VerifyCertificate] processVerification tx', txHash);
       
       // Wait for transaction confirmation using waitForTransactionReceipt
-      const { waitForTransactionReceipt } = await import('viem');
+      const { waitForTransactionReceipt } = await import('viem/actions');
       const publicClient = (window as any).wagmi?.getPublicClient();
       if (!publicClient) {
         throw new Error('No public client available');
