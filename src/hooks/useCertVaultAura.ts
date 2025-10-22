@@ -444,9 +444,9 @@ export function useCertVaultAura() {
       functionName: 'getCertificateInfo',
       args: [certId],
     });
-    // (certType, title, institution, description, metadataHash, issueDate, expiryDate, isVerified, issuer, holder)
-    const [certType, title, institution, description, metadataHash, issueDate, expiryDate, isVerified, issuer, holder] = info as any[];
-    return { certId, certType, title, institution, description, metadataHash, issueDate, expiryDate, isVerified, issuer, holder };
+    // (certType, title, institution, description, metadataHash, issueDate, expiryDate, isVerified, issuer, holder, verifierAddress)
+    const [certType, title, institution, description, metadataHash, issueDate, expiryDate, isVerified, issuer, holder, verifierAddress] = info as any[];
+    return { certId, certType, title, institution, description, metadataHash, issueDate, expiryDate, isVerified, issuer, holder, verifier: verifierAddress };
   };
 
   const listCertificatesForHolder = async (holderAddr: string) => {

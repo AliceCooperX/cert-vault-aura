@@ -228,7 +228,8 @@ contract CertVaultAura is SepoliaConfig {
         uint256 expiryDate,
         bool isVerified,
         address issuer,
-        address holder
+        address holder,
+        address verifierAddress
     ) {
         Certificate storage cert = certificates[_certId];
         return (
@@ -241,7 +242,8 @@ contract CertVaultAura is SepoliaConfig {
             cert.expiryDate,
             cert.isVerified,
             cert.issuer,
-            cert.holder
+            cert.holder,
+            verifier
         );
     }
     

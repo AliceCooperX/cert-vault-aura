@@ -24,16 +24,15 @@ const Vault = () => {
   const { address, isConnected } = useAccount();
 
   useEffect(() => {
+    let cancelled = false;
     const load = async () => {
-      if (!isConnected || !address) {
-        setItems([]);
-        return;
-      }
+      if (!isConnected || !address || loading) return;
       setLoading(true);
       setLoadError(null);
       try {
         console.log('[Vault] load:start', { address, isConnected });
         const list = await listCertificatesForHolder(address);
+        if (cancelled) return;
         console.log('[Vault] load:list', { list });
         // map to UI schema
         const mapped = list.map((it: any) => ({
@@ -53,14 +52,16 @@ const Vault = () => {
         console.log('[Vault] load:mapped', { mapped });
         setItems(mapped);
       } catch (e: any) {
+        if (cancelled) return;
         console.error('[Vault] load:error', e);
         setLoadError(e?.message || 'Failed to load certificates');
       } finally {
-        setLoading(false);
+        if (!cancelled) setLoading(false);
       }
     };
     load();
-  }, [isConnected, address, listCertificatesForHolder]);
+    return () => { cancelled = true; };
+  }, [isConnected, address]);
 
   const filteredCertificates = useMemo(() => {
     return items.filter(cert =>
@@ -320,7 +321,8 @@ const Vault = () => {
                         </Dialog>
                       </div>
                     </div>
-                  </Card>
+                  </div>
+                </Card>
                 ))}
               </div>
 
