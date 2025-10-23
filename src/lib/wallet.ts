@@ -1,7 +1,7 @@
 import { getDefaultConfig } from '@rainbow-me/rainbowkit';
 import { sepolia } from 'wagmi/chains';
-// @ts-ignore: import compiled artifact JSON for ABI only
-import CertVaultAuraArtifact from '../../artifacts/contracts/CertVaultAura.sol/CertVaultAura.json';
+// @ts-ignore: import ABI json directly for runtime
+import CertVaultAuraArtifact from '../abi/CertVaultAura.json';
 
 // Wallet Connect Configuration
 export const projectId = import.meta.env.VITE_WALLET_CONNECT_PROJECT_ID || 'YOUR_WALLET_CONNECT_PROJECT_ID';
